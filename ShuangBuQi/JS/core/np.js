@@ -2,11 +2,10 @@
 // 激活函数
 var activeFunctions = {
   sigmoid: {
-    active: function(x) { 
+    f: function(x) { 
       return 1 / (1 + Math.exp(-x)) 
     },
-    deriv: function(x) {
-      var fx = sigmoid.active(x)
+    deriv: function(fx) {
       return fx * (1 - fx)
     },
   },
@@ -15,14 +14,14 @@ var activeFunctions = {
 // 求误差函数
 var lossFunctions = {
   // 均方误差
-  MSE: function(yTrue, yPred) {
-    var loss = 0
-    var len = (typeof(yTrue) === "number") ? 1 : yTrue.length
-    for (var i = 0; i < len; i++) {
-      loss += (yTrue[i] - yPred[i]) ** 2
-    }
-    return loss / yTrue.length
-  },
+  MSE: {
+    f: function(yTrue, yPred) {
+      return (yTrue - yPred) ** 2
+    },
+    deriv: function(yTrue, yPred) {
+      return -2 * (yTrue - yPred)
+    },
+  }
 
 }
 
@@ -37,9 +36,9 @@ var config = {
   // 学习速率
   learnRate: 0.1,
   // 单个样本学习次数
-  learnTimes: 1000,
+  epochs: 1000,
   // 可以允许的最小误差
-  minLoss: 0.1,
+  minLoss: 0.001,
   // 激活函数
   fActive: activeFunctions.sigmoid, 
   // 求误差函数
@@ -47,7 +46,11 @@ var config = {
 }
 
 // 神经元节点
-Nnode = function(inputs, layer) {
+Nnode = function(layer, id, inputs, fActive) {
+  // 处于神经网络那一层，0、1、2 分别为 输入层、隐层、输出层
+  this.layer = layer,
+  // 处于神经网络某一层的第几个位置
+  this.id = id,
   // 权重与偏置
   this.weights = Array(inputs.length)
   this.weights.fill(Math.random())
@@ -56,8 +59,9 @@ Nnode = function(inputs, layer) {
   this.total = 0
   this.active = 0
   this.deriv = 0
-  // 处于神经网络那一层，0、1、2 分别为 输入层、隐层、输出层
-  this.layer = layer
+  // 激活函数
+  this.fActive = fActive.f
+  this.fDeriv = fActive.deriv
   // 该节点的上下层输入输出节点
   this.inputs = inputs
   this.outputs = []
@@ -66,102 +70,142 @@ Nnode.prototype = {
   // 记录向前传导时的各项输出值
   forward() {
     this.total = this.bias
-    for (var i in this.weights) {
+    for (var i = 0; i < this.weights.length; i++) {
       this.total += this.weights[i] * this.inputs[i].active
     }
-    this.active = config.fActive.active(this.total)
-    this.deriv = config.fActive.deriv(this.total)
+    this.active = this.fActive(this.total)
+    this.deriv = this.fDeriv(this.active)
   },
   // 计算从当前节点到输出层节点直接的偏导数之积
-  getDerivPre() {
-    var derivPre = 1
-    if (this.outputs.length === 0) return derivPre
+  getPreDeriv() {
+    if (this.outputs.length === 0) return 1
+    var derivPre = 0
     this.outputs.forEach(o => {
-      derivPre += derivPre * o.deriv * o.getDerivPre()
+      derivPre += o.deriv * o.weights[this.id] * o.getPreDeriv()
     })
     return derivPre
   },
   // 根据反馈的 “偏差” 更新当前节点的各项参数
   backward(feedback = learnRate * derivLoss) {
-    feedback *= this.deriv * this.getDerivPre()
+    feedback *= this.getPreDeriv() * this.deriv
     this.bias -= feedback
-    for (var i in this.weights) {
-      this.weights[i] -= this.weights[i] * feedback
+    for (var i = 0; i < this.weights.length; i++) {
+      this.weights[i] -= this.inputs[i].active * feedback
     }
   }
 
 }
 
 // 神经元网络
-Nnet = function() {
+Nnet = function(config) {
   // 输入层对接接口
   var len = config.input[0].length
-  this.active = Array(len)
-  for (var i in this.active) {
-    this.active[i] = {active: 0}
+  this.inputs = Array(len)
+  for (var i = 0; i < this.inputs.length; i++) {
+    this.inputs[i] = {active: 0}
   }
   // 神经元网络
   this.net = Array(config.layers.length)
   for (var i = 0; i < this.net.length; i++) {
     this.net[i] = Array(config.layers[i])
-    if (i > 0) this.net[i - 1].forEach(e => e.output = this.net[i])
-    for (var j = 0; j < this.net[i]; j++) {
+    if (i > 0) this.net[i - 1].forEach(e => e.outputs = this.net[i])
+    for (var j = 0; j < this.net[i].length; j++) {
       if (i === 0) {
-        this.net[i][j] = new Node(this.active, 0)
+        this.net[i][j] = new Nnode(0, j, this.inputs, config.fActive)
       } else if (i === config.layers.length - 1) {
-        this.net[i][j] = new Node(this.net[i - 1], 2)
+        this.net[i][j] = new Nnode(2, j, this.net[i - 1], config.fActive)
       } else {
-        this.net[i][j] = new Node(this.net[i - 1], 1)
+        this.net[i][j] = new Nnode(1, j, this.net[i - 1], config.fActive)
       }
     }
   }
-  // 输出层节点，这里只有一个输出层
-  this.Onode = this.net[i - 1][j - 1]
-
+  // 输出层节点
+  this.outputs = this.net[this.net.length - 1]
+  this.predicts = Array(this.outputs.length)
+  for (var i = 0; i < this.predicts.length; i++) {
+    this.predicts[i] = {loss: 0, deriv: 0}
+  }
+  // 总体误差
+  this.totalLoss = 0
 }
 
 Nnet.prototype = {
   // 向前传导
   feed(id) {
-    for (var i in this.active) {
-      this.active[i].active = config.input[id][i]
+    for (var i = 0; i < this.inputs.length; i++) {
+      this.inputs[i].active = config.input[id][i]
     }
     for (var i = 0; i < this.net.length; i++) {
-      for (var j = 0; j < this.net[i]; j++) {
+      for (var j = 0; j < this.net[i].length; j++) {
         this.net[i][j].forward()
       }
+    }
+    this.totalLoss = 0
+    for (var i = 0; i < this.outputs.length; i++) {
+      var yTrue = config.output[id][i], yPred = this.outputs[i].active
+      this.predicts[i].loss = config.fLoss.f(yTrue, yPred)
+      this.predicts[i].deriv = config.fLoss.deriv(yTrue, yPred)
+      this.totalLoss += this.predicts[i].loss
     }
   },
   // 向后传导，通过反馈更新各神经元参数
   learn(id) {
-    this.loss = config.fLoss(config.output[id], this.Onode.active)
-    var derivLoss = 2 * (this.loss - 1)
-    var feedback = config.learnRate * derivLoss
-    for (var i = 0; i < this.net.length; i++) {
-      for (var j = 0; j < this.net[i]; j++) {
-        this.net[i][j].backward(feedback)
+    for (var p of this.predicts) {
+      var feedback = config.learnRate * p.deriv
+      for (var i = 0; i < this.net.length; i++) {
+        for (var j = 0; j < this.net[i].length; j++) {
+          this.net[i][j].backward(feedback)
+        }
       }
     }
   },
   // 通过样本训练神经网络
   train: function() {
-    for (var i = 0; i < config.learnTimes; i++) {
+    for (var i = 0; i < config.epochs; i++) {
       for (var j = 0; j < config.input.length; j++) {
         this.feed(j)
         this.learn(j)
-        if (this.loss < config.minLoss) return
+        if (i % 10 === 0 && j === 0) console.log(this.totalLoss)
+        if (this.totalLoss < config.minLoss) return
       }
     }
   },
   // 通过神经网络预测结果
   predict: function(input) {
-    var output = Array(input.length)
-    for (var i in output) {
+    var output = Array(input.length), vLen = this.outputs.length
+    for (var i = 0; i < output.length; i++) {
       this.feed(input[i])
-      output[i] = this.Onode.active
+      if (vLen === 0) {
+        output[i] = this.outputs[0].active
+      } else {
+        output[i] = Array(vLen)
+        for (var i = 0; i < vLen; i++) {
+          output[i][j] = this.outputs[j].active
+        }
+      }
     }
     return output
   }
 
 }
 
+
+
+config.input =  [
+  [-2, -1],   // Alice
+  [25, 6],    // Bob
+  [17, 4],    // Charlie
+  [-15, -6],  // Diana
+]
+config.output = [
+  [1], 
+  [0], 
+  [0], 
+  [1], 
+]
+
+var nnet = new Nnet(config)
+//nnet.feed(0)
+//nnet.learn()
+
+nnet.train()
