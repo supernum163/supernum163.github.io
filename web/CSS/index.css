@@ -1,0 +1,165 @@
+
+ html, body {
+  background-color: gray;
+  width: 100%;
+  margin: 0;
+  overflow-x: hidden;
+}
+
+/* 顶部信息栏 */
+header {
+  background-color: white;
+  display: flow-root; 
+  box-sizing: border-box;
+  position: fixed;
+  padding: 0.5rem 1rem;
+  height: 4rem;
+  width: 100%;
+  z-index: 9;
+}
+header > legend {
+  float: left;
+  box-sizing: border-box;
+  padding: 0.35rem 0.5rem;
+  border: 0.15rem solid gray;
+  max-width: calc(100% - 5rem);
+  height: 3rem;
+}
+header > legend:focus-within{
+  border: 0.15rem solid black;
+}
+header > legend > input {
+  padding: 0;
+  border: 0;
+  outline: 0;
+  box-shadow: none;
+  font-size: 1rem;
+  max-width: calc(100% - 1.3rem);
+  height: 2rem;
+  overflow: auto;
+  vertical-align: middle;
+}
+@media (max-width: 10rem) {
+  header > legend {
+    display: none;
+  }
+}
+header > a {
+  float: right;
+  height: 3rem;
+}
+header > a > img {
+  height: inherit;
+}
+
+/* 推荐列表 */
+#recommend {
+  padding: 6rem 0 2rem 0;
+  position: relative;
+}
+#recommend > .games {
+  height: 32rem;
+  overflow-y: hidden;
+  text-align: center;
+}
+#recommend > .games > .game {
+  margin-bottom: 32rem;
+  display: inline-block;
+  vertical-align: middle;
+}
+#recommend > .games > .game:first-child {
+  width: 18rem;
+  /* height: 32rem; */
+}
+@media (max-width: 20rem) {
+  #recommend > .games {
+    height: auto;
+  }
+  #recommend > .games > .game {
+    display: none;
+  }
+  #recommend > .games > .game:first-child {
+    display: block;
+  }
+  #recommend > .games > .game {
+    max-width: 100%;
+    margin: 1rem auto;
+  }
+}
+/* 推荐列表中的左右滑动箭头 */
+.arrow {
+  position: absolute;
+  top: 50%;
+  color: white;
+  background-color: black;
+  z-index: 3;
+}
+#arrow-left {
+  left: 0rem;
+}
+#arrow-right {
+  right: 0rem;
+}
+
+/* 游戏列表 */
+#gamelist {
+  max-width: 960px;
+  margin: 4rem auto;
+}
+#gamelist > .games {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+}
+/* 游戏信息卡 */
+.game {
+  display: inline-block;
+  position: relative;
+  width: 14rem;
+  max-width: 100%;
+  margin: 0 0.5rem 2rem 0.5rem;
+}
+.game > img {
+  display: block;
+  position: relative;
+  width: 100%;
+  z-index: 1;
+}
+.game > div {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  background-color: black;
+  color: white;
+  text-align: center;
+}
+.game > div > p {
+  text-align: justify;
+  padding: 0 1rem;
+  margin: 0;
+  max-height: calc(100% - 8rem);
+  overflow-y: auto;
+}
+
+.game > div > a {
+  position: absolute;
+  bottom: 1rem;
+  left: 10%;
+  width: 80%;
+  height: 2rem;
+  background: gold;
+  color:white;
+  text-decoration:none;
+  padding: auto 0;
+}
+
+/* 底部显示更多栏 */
+#showmore > p {
+  padding: 0; 
+  font-size: 0.8rem
+} 
