@@ -14,17 +14,15 @@ matprod = function(A, B) {
   return C
 }
 
-
-matsum = function(A, B, fun) {
-  var l = Math.max(A.length, B.length)
-  var C = Array(l)
-  if (typeof(A) === typeof(B) === "number") 
+// 高纬数组 A B 维度必须相同
+apply = function(A, B, fun) {
+  if (typeof(A) === "number") {
     return fun(A, B)
-  for (var i = 0; i < l; i++) {
-    var m = i % A.length; n = i % B.length
-    C[i] = matsum(A[m], B[n], fun)
   }
+  var C = Array(A.length)
+  for (var i = 0; i < A.length; i++) {
+    C[i] = apply(A[i], B[i], fun)
+  }
+  return C
 }
-
-
 

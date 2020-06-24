@@ -18,6 +18,8 @@ input <- matrix(c(-1, 2, 3, -4), nrow = 2)
 relu <- new("Relu")
 relu$backward(input)
 
+
+
 setRefClass(
   "Sigmoid",
   fields = c("output"),
@@ -36,6 +38,8 @@ setRefClass(
 input <- matrix(c(-1, 2, 3, -4), nrow = 2)
 sigmoid <- new("Sigmoid")
 sigmoid$backward(input)
+
+
 
 # 全连接层
 setRefClass(
@@ -85,6 +89,8 @@ for (i in 0:1) {
   }
 }
 
+
+
 softmax <- function(input) {
   if(length(dim(input)) == 2) {
     output <- t(apply(input, 1, function(x) {x - max(x)}))
@@ -106,6 +112,7 @@ meanSquared <- function(yPred, yTrue) {
   batch = nrow(yTrue)
   return(sum((yTrue - yPred) ^ 2) / batch / 2)
 }
+
 
 
 setRefClass(
@@ -138,6 +145,7 @@ softmaxWithLoss$forward(input, yTrue)
 softmaxWithLoss$backward()
 
 
+
 setRefClass(
   "Dropout",
   fields = c("ratio", "dropout"),
@@ -167,123 +175,195 @@ dropout <- new("Dropout", 0.3)
 dropout$forward(input)
 dropout$backward(input)
 
-im2col <- function(input, filter_h, filter_w, stride = 1, pad = 0) {
-  D <- dim(input)
-}
 
-    # N, C, H, W = input_data.shape
-    out_h <- floor((D[3] + 2 * pad - filter_h) / stride) + 1
-    out_w <- floor((D[4] + 2 * pad - filter_w) / stride) + 1
 
-  padding <- matrix(0, ncol = pad, nrow = nrow(input))
-  input <- cbind(padding, input, padding)
-  padding <- matrix(0, ncol = ncol(input), nrow = pad)
-  input <- cbind(padding, input, padding)
-  col <- array(0, dim = c(D[0], D[1], filter_h, filter_w, out_h, out_w))
-    # img = np.pad(input_data, [(0,0), (0,0), (pad, pad), (pad, pad)], 'constant')
-    # col = np.zeros((N, C, filter_h, filter_w, out_h, out_w))
-
-for (y in 1:filter_h) {
-  y_start <- stride * (y - 1)
-  for (x in 1:filter_w) {
-    x_start <- stride * (x - 1)
-    col[ , , y, x, , ] <- input[ , , 
-      (y_start + 1):(ystart+filter_h), 
-      (x_start + 1):(xstart+filter_w)
-    ]
+transpos <- function(arr, pos) {
+  old_dim <- dim(arr)
+  new_dim <- old_dim[pos]
+  dim_len <- length(old_dim)
+  vec <- as.vector(arr)
+  for (i in dim_len:1) {
+    times <- 1
+    j <- i - 1
+    while (j >= 1) {
+      times <- times * old_dim[j]
+      j = j - 1
+    }
+    repeats <- 1
+    j <- i + 1
+    while (j <= dim_len) {
+      repeats <- repeats * old_dim[j]
+      j = j + 1
+    }
+    d <- 1:old_dim[i]
+    d <- rep(d, each = times)
+    d <- rep(d, repeats)
+    vec <- vec[order(d)]
   }
+  vec <- array(vec, new_dim)
+  return(vec)
 }
-    for y in range(filter_h):
-        y_max = y + stride * out_h
-        for x in range(filter_w):
-            x_max = x + stride * out_w
-            col[:, :, y, x, :, :] = img[:, :, y:y_max:stride, x:x_max:stride]
 
-    col = col.transpose(0, 4, 5, 1, 2, 3).reshape(N * out_h * out_w, -1)
-    return col
+arr <- 1:6
+dim(arr) <- c(1, 2, 3)
+pos <- c(3, 2, 1)
+a<-transpos(arr, pos)
 
+
+img2col <- function(input, Di, Dw, out_h, out_w, stride = 1, pad = 0) {
+  if (pad > 0) {
+    data <- array(0, dim = c(Di[1], Di[2], Di[3] + pad * 2, Di[4] + pad * 2))
+    data[ , , (pad + 1):(Di[3] + pad), (pad + 1):(Di[4] + pad)] <- input
+  } else {
+    data <- input
+  }
+  col <- array(0, dim = c(Di[1], Dw[2], Dw[3], Dw[4], out_h, out_w))
+  for (y in 1:Dw[3]) {
+    y_max <- y + stride * out_h - 1
+    for (x in 1:Dw[4]) {
+      x_max <- x + stride * out_w - 1
+      col[ , , y, x, , ] <- data[ , , seq(y, y_max, stride), seq(y, y_max, stride)]
+    }
+  }
+  col <- transpos(col, c(1, 5, 6, 2, 3, 4))
+  dim(col) <- c(Di[1] * out_h * out_w, Dw[2] * Dw[3] * Dw[4])
+  return(col)
+}
+
+col2img <- function(col, Di, Dw, out_h, out_w, stride = 1, pad = 0) {
+  dim(col) <- c(Di[1], out_h, out_w, Dw[2], Dw[3], Dw[4])
+  col <- transpos(col, c(1, 4, 5, 6, 2, 3))
+  img <- array(0, dim = c(Di[1], Di[2], Di[3] + pad * 2, Di[4] + pad * 2))
+  for (y in 1:Dw[3]) {
+    y_max <- y + stride * out_h - 1
+    for (x in 1:Dw[4]) {
+      x_max <- x + stride * out_w - 1
+      img[ , , seq(y, y_max, stride), seq(y, y_max, stride)] <- 
+      img[ , , seq(y, y_max, stride), seq(y, y_max, stride)] + col[ , , y, x, , ]
+    }
+  }
+  img <- img[ ,  , (pad + 1):(Di[3] + pad), (pad + 1):(Di[4] + pad)]
+  return(img)
+}
 
 
 setRefClass(
   "Convolution",
-  fields = c("W", "b", "stride", "pad", "input", "col", "colW"),
+  fields = c(
+    "weight", "bias", "stride", "pad", 
+    "Di", "Dw", "out_h", "out_w",
+    "col", "col_W"
+  ),
   methods = list(
-    initialize = function(W, b, stride = 1, pad = 0) {
-      W <<- W
-      b <<- b
+    initialize = function(weight, bias, stride = 1, pad = 0) {
+      weight <<- weight
+      bias <<- bias
       stride <<- stride
       pad <<- pad
+      Dw <<- dim(weight)
     },
-    forward = function(input, drop = TRUE) {
+    forward = function(input) {
+      Di <<- dim(input)
+      out_h <<- floor((Di[3] + 2 * pad - Dw[3]) / stride) + 1
+      out_w <<- floor((Di[4] + 2 * pad - Dw[4]) / stride) + 1
+      
+      col <<- img2col(input, Di, Dw, out_h, out_w, stride, pad)
+      col_W <<- weight
+      dim(col_W) <<- c(Dw[1], Dw[2] * Dw[3] * Dw[4])
+      col_W <<- t(col_W)
 
+      output <- t(t(col %*% col_W) + bias)
+      dim(output) <- c(Di[1], out_h, out_w, Dw[1])
+      output <- transpos(output, c(1, 4, 2, 3))
+      return(output)
     },
     backward = function(feedback) {
+      feedback <- transpos(feedback, c(1, 3, 4, 2))
+      dim(feedback) <- c(Di[1] * out_h * out_w , Dw[1])
 
+      Dbias <- feedback
+      dim(Dbias) <- c(Dw[1], Di[1] * out_h * out_w)
+      bias <<- bias - apply(Dbias, 1, sum)
+      Dweight <- t(col) %*% feedback
+      Dweight <- transpos(Dweight, c(2, 1))
+      dim(Dweight) <- Dw
+      weight <<- weight - Dweight
+
+      feedback <- feedback %*% t(col_W)
+      feedback <- col2img(feedback, Di, Dw, out_h, out_w, stride, pad)
+      return(feedback)
     }
   )
 )
 
+# 简单维度
+Di <- c(1, 1, 5, 5)
+Dw <- c(1, 1, 3, 3)
+input <- array(1:25, dim = Di)
+weight <- array(1:9, dim = Dw)
+bias <- 1
+# 复杂维度
+Di <- c(2, 3, 5, 5)
+Dw <- c(1, 3, 2, 2)
+input <- array(1:150, dim = Di)
+weight <- array(1:12, dim = Dw)
+bias <- 1
 
-    def forward(self, x):
-        FN, C, FH, FW = self.W.shape
-        N, C, H, W = x.shape
-        out_h = 1 + int((H + 2*self.pad - FH) / self.stride)
-        out_w = 1 + int((W + 2*self.pad - FW) / self.stride)
-
-        col = im2col(x, FH, FW, self.stride, self.pad)
-        col_W = self.W.reshape(FN, -1).T
-
-        out = np.dot(col, col_W) + self.b
-        out = out.reshape(N, out_h, out_w, -1).transpose(0, 3, 1, 2)
-
-        self.x = x        self.col = col
-        self.col_W = col_W
-
-        return out
-
-    def backward(self, dout):
-        FN, C, FH, FW = self.W.shape
-        dout = dout.transpose(0,2,3,1).reshape(-1, FN)
-
-        self.db = np.sum(dout, axis=0)
-        self.dW = np.dot(self.col.T, dout)
-        self.dW = self.dW.transpose(1, 0).reshape(FN, C, FH, FW)
-
-        dcol = np.dot(dout, self.col_W.T)
-        dx = col2im(dcol, self.x.shape, FH, FW, self.stride, self.pad)
-
-        return dx
+stride <- 1; pad <- 0
+out_h <- floor((Di[3] + 2 * pad - Dw[3]) / stride) + 1
+out_w <- floor((Di[4] + 2 * pad - Dw[4]) / stride) + 1
+img2col(input, Di, Dw, out_h, out_w)
+conv <- new("Convolution", weight, bias)
+output <- conv$forward(input)
+conv$backward(output)
 
 
 
-a <- matrix(c(
-  0, 0, 0, 1, 
-  0, 0, 1, 2, 
-  0, 0, 2, 3, 
-  0, 1, 0, 4, 
-  0, 1, 1, 5, 
-  0, 1, 2, 6
-), ncol = 4, byrow = TRUE)
-a <- as.data.frame(a)
-colnames(a) <- c("v0", "v1", "v2", "v")
-require(dplyr)
+setRefClass(
+  "MaxPool",
+  fields = c(
+    "pool_h", "pool_w", "stride", "pad", 
+    "Di", "Dw", "out_h", "out_w", 
+    "input", "arg_max", "pool_size"
+  ),
+  methods = list(
+    initialize = function(pool_h, pool_w, stride = 1, pad = 0) {
+      pool_h <<- pool_h
+      pool_w <<- pool_w
+      stride <<- stride
+      pad <<- pad
+      pool_size <<- pool_h * pool_w
+    },
+    forward = function(input) {
+      Di <<- dim(input)
+      Dw <<- c(1, Di[2], pool_h, pool_w)
+      out_h <<- floor(1 + (D[3] - pool_h) / stride)
+      out_w <<- floor(1 + (D[4] - pool_w) / stride)
 
-a <- a[, c(3, 2, 1, 4)]
-colnames(a) <- c("v0", "v1", "v2", "v")
-a %>% arrange(v0, v1, v2)
+      col <- img2col(input, Di, Dw, out_h, out_w, stride, pad)
+      dim(col) <- c(Di[1] * out_h * out_w * Di[2], pool_size)
+      arg_max <<- apply(col, 1, which.max)
+      input <<- input
+      out <- apply(col, 1, max)
+      dim(out) <- c(Di[1], out_h, out_w, Di[2])
+      out <- transpos(out, c(1, 4, 2, 3))
+      return(out)
+    },
+    backward = function(feedback) {
+      feedback <- transpos(feedback, c(1, 3, 4, 2))
+      dmax <- array(0, dim = c(length(feedback), pool_size))
 
-  v0 v1 v2 v
-1  0  0  0 1
-2  0  1  0 4
-3  1  0  0 2
-4  1  1  0 5
-5  2  0  0 3
-6  2  1  0 6
+      dmax[np.arange(self.arg_max.size), self.arg_max.flatten()] = dout.flatten()
 
-a = np.array([
-  [
-    [1, 2, 3],
-    [4, 5, 6]
-  ]
-])
-a.shape
+      dim(dmax) <- c(Di[1] * Dw[1], out_h * out_w)
+      feedback <- col2img(dmax, Di, Dw, out_h, out_w, stride, pad)
+      return(feedback)
+    }
+  )
+)
+
+d <- array(1:9, dim = c(3, 3))
+a <- 1:3
+b <- c(2, 3, 1)
+d[a, b]
+
