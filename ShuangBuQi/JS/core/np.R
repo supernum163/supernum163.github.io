@@ -337,8 +337,8 @@ setRefClass(
     forward = function(input) {
       Di <<- dim(input)
       Dw <<- c(1, Di[2], pool_h, pool_w)
-      out_h <<- floor(1 + (D[3] - pool_h) / stride)
-      out_w <<- floor(1 + (D[4] - pool_w) / stride)
+      out_h <<- floor(1 + (Di[3] - pool_h) / stride)
+      out_w <<- floor(1 + (Di[4] - pool_w) / stride)
 
       col <- img2col(input, Di, Dw, out_h, out_w, stride, pad)
       dim(col) <- c(Di[1] * out_h * out_w * Di[2], pool_size)
@@ -352,18 +352,18 @@ setRefClass(
     backward = function(feedback) {
       feedback <- transpos(feedback, c(1, 3, 4, 2))
       dmax <- array(0, dim = c(length(feedback), pool_size))
-
-      dmax[np.arange(self.arg_max.size), self.arg_max.flatten()] = dout.flatten()
-
-      dim(dmax) <- c(Di[1] * Dw[1], out_h * out_w)
+      index <- 1:length(feedback) + (arg_max - 1) * pool_size
+      dmax[index] <- as.vector(feedback)
+      dim(dmax) <- c(Di[1] * Di[2] * Dw[3] * Dw[4] , out_h * out_w)
       feedback <- col2img(dmax, Di, Dw, out_h, out_w, stride, pad)
       return(feedback)
     }
   )
 )
 
-d <- array(1:9, dim = c(3, 3))
-a <- 1:3
-b <- c(2, 3, 1)
-d[a, b]
+pool_h = Dw[3]; pool_w = Dw[4]
+pool_size <- pool_h * pool_w
+pool <- new("MaxPool", pool_h, pool_w)
+output <- pool$forward(input)
+pool$backward(output)
 
