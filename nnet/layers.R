@@ -1,3 +1,6 @@
+KSI <- 1e-7
+
+
 setRefClass(
   "Relu",
   fields = c("zeros"),
@@ -104,8 +107,8 @@ softmax <- function(input) {
 
 crossEntropy <- function(yPred, yTrue) {
   batch = nrow(yTrue)
-  # 加入微小值 1e-7 是为了防止 yPred = 0 时出现负无穷大
-  return(-sum(yTrue * log(yPred + 1e-7)) / batch)
+  # 加入微小值 KSI 是为了防止 yPred = 0 时出现负无穷大
+  return(-sum(yTrue * log(yPred + KSI)) / batch)
 }
 
 meanSquared <- function(yPred, yTrue) {
@@ -143,6 +146,103 @@ yTrue <- c(2, 1)
 softmaxWithLoss <- new("SoftmaxWithLoss")
 softmaxWithLoss$forward(input, yTrue)
 softmaxWithLoss$backward()
+
+
+setRefClass(
+  "Identity",
+  fields = c("fcost", "batch", "output"),
+  methods = list(
+    initialize = function(fcost = c("meanSquared", "crossEntropy")) {
+      fcost <<- match.args(fcost)
+      batch <<- nrow(output)
+    },
+    forward = function(yPred, yTrue) {
+      loss <<- do.call(fcost, list(yPred, yTrue))
+      return(loss)
+    },
+    backward = function(feedback = 1) {
+      feedback = feedback * loss / batch
+      return(feedback)
+    }
+  )
+)
+
+
+
+setRefClass(
+  "BatchNormalization",
+  fields = c("gamma", "beta", "momentum", "shape", 
+    "Mavg", "Mvar", "xc", "std", "dgamma", "dbeta"
+  ),
+  methods = list(
+    initialize = function(gamma = numeric(0), beta = numeric(0), 
+      momentum = 0.9, Mavg = numeric(0), Mvar = numeric(0)
+    ) {
+      gamma <<- gamma
+      beta <<- beta
+      momentum <<- momentum
+      # 移动平均和移动方差
+      Mavg <<- Mavg
+      Mvar <<- Mvar  
+    },
+    forward = function(input, train = TRUE) {
+      shape <<- dim(input)
+      if (length(shape) != 2) {
+        Nout <- length(input) / shape[1]
+        dims(input) <<- c(shape[1], Nout)
+      } else {
+        Nout <- shape[2]
+      }
+      if (length(gamma) == 0) {
+        gamma <<- rep(1, Nout)
+        beta <<- rep(0, Nout)
+      }
+      if (length(Mavg) == 0) {
+        Mavg <<- rep(0, Nout)
+        Mvar <<- rep(0, Nout)
+      }
+      if (train) {
+        mu <- apply(input, 2, mean)
+        xc <<- t(t(input) - mu)
+        var <- apply(xc, 2, function(x) {mean(x ^ 2)})
+        std <<- sqrt(var + KSI)
+        xn <<- t(t(xc) / std)
+        Mavg <<- momentum * Mavg + (1 - momentum) * mu
+        Mvar <<- momentum * Mvar + (1 - momentum) * var  
+      } else {
+        xc <<- input - Mavg
+        xn <<- xc / sqrt(Mvar + KSI)
+      }
+      output <- t(gamma * t(xn) + beta) 
+      dim(output) <- shape
+      return(output)
+    },
+    backward = function(feedback) {
+      if (length(shape) != 2) {
+        Nout <- length(feedback) / shape[1]
+        dims(feedback) <<- c(shape[1], Nout)
+      } else {
+        Nout <- shape[2]
+      }
+      dbeta <<- apply(feedback, 2, sum)
+      dgamma <<- apply(xn * feedback, 2, sum)
+      dxn <- gamma * feedback
+      dxc <- dxn / std
+      dstd <- -apply(dxn * xc / std ^ 2, 2, sum)
+      dvar <- 0.5 * dstd / std
+      dxc <- dxc + 2.0 / shape[1] * xc * dvar
+      dmu <- apply(dxc, 2, sum)
+      dx <- dxc - dmu / shape[1]
+      dim(dx) <- shape
+      return(dx)
+    }
+  )
+)
+
+input <- matrix(c(1, 3, 2, 4), nrow = 2)
+bnorm <- new("BatchNormalization")
+output <- bnorm$forward(input)
+bnorm$backward(output)
 
 
 

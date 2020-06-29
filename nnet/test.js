@@ -16,6 +16,7 @@ matprod = function(A, B) {
 
 // 高纬数组 A B 维度必须相同
 apply = function(A, B, fun) {
+  // if (["number", "string", "boolean"].indexOf(typeof(A)) > -1) {
   if (typeof(A) === "number") {
     return fun(A, B)
   }
