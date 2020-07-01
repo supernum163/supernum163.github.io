@@ -55,21 +55,21 @@ input <- matrix(c(-2, -1, 25, 6, 17, 4, -15, -6), nrow = 4, byrow = TRUE)
 output = array(c(1, 0, 0, 1), dim = c(4, 1))
 
 nnet <- Nnet(dim(input), dim(output))
-Sigmoid(nnet, n = 2)
-Sigmoid(nnet, n = 1)
-MeanSquared(nnet)
-optimizer <- SGD(nnet, lr = 0.1)
+LAYER$Sigmoid(nnet, n = 2)
+LAYER$Sigmoid(nnet, n = 1)
+LAYER$LAST$MeanSquared(nnet)
+OPTIMIZER$SGD(nnet, lr = 0.1)
 nnet$fFeed <- function(nnet) {
   nnet$data$input0 <- input
   nnet$data$output <- output
 }
 nnet$train(200)
 nnet$loss
-nnet$data$input4
 
 nnet$data[nnet$params]
 nnet$data[nnet$Dparams]
 inputs <- ls(nnet$data, pattern = "input\\d+")
 nnet$data[inputs]
+nnet$data$input4
 
 

@@ -118,7 +118,7 @@ MeanSquared <- function(nnet) {
   self$forward <- function() {
     self$output <- self$nnet$get("input", self$layerId - 1)
     self$yTrue <- self$nnet$get("output")
-    self$nnet$loss <- mean((self$yTrue - self$output) ^ 2) / 2
+    self$nnet$loss <- sum((self$yTrue - self$output) ^ 2) / self$nnet$batch / 2
   }
   self$backward <- function() {
     feedback <- self$output - self$yTrue
@@ -331,4 +331,9 @@ MaxPool <- function(pool_h, pool_w, stride = 1, pad = 0) {
   }
 }
 
-
+LAYSER <- list(
+  Convolution = Convolution, MaxPool = MaxPool, 
+  Affine = Affine, ReLU = ReLU, Sigmoid = Sigmoid, 
+  BatchNormalization = BatchNormalization, Dropout = Dropout,
+  LAST <- list(MeanSquared = MeanSquared, SoftmaxWithLoss = SoftmaxWithLoss)
+)
