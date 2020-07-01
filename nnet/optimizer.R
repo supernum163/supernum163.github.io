@@ -1,4 +1,19 @@
 # 随机梯度下降法（Stochastic Gradient Descent）
+SGD <- function(nnet, lr = 0.01) {
+  self <- new.env()
+  self$nnet <- nnet
+  nnet$optimizer <- self
+  self$lr <- lr
+  self$optimise <- function() {
+    for (i in 1:length((self$nnet$params))) {
+      param <- self$nnet$get(self$nnet$params[i])
+      Dparam <- self$nnet$get(self$nnet$Dparams[i])
+      self$nnet$set(self$nnet$params[i], val = param - lr * Dparam)
+    }
+  }
+  return(self)
+}
+
 setRefClass(
   "SGD",
   fields = c("lr"),
@@ -14,9 +29,6 @@ setRefClass(
     }
   )
 )
-
-optimizer <- new("SGD")
-optimizer$optimise(2:1, 1:2)
 
 
 
@@ -43,10 +55,6 @@ setRefClass(
   )
 )
 
-optimizer <- new("Momentum")
-optimizer$optimise(2:1, 1:2)
-optimizer$optimise(2:1, -1:0)
-
 
 
 setRefClass(
@@ -71,10 +79,6 @@ setRefClass(
   )
 )
 
-optimizer <- new("Nesterov")
-optimizer$optimise(2:1, 1:2)
-optimizer$optimise(2:1, -1:0)
-
 
 
 setRefClass(
@@ -97,9 +101,6 @@ setRefClass(
     }
   )
 )
-
-optimizer <- new("AdaGrad")
-optimizer$optimise(2:1, 1:2)
 
 
 
@@ -124,10 +125,6 @@ setRefClass(
     }
   )
 )
-
-optimizer <- new("RMSprop")
-optimizer$optimise(2:1, 1:2)
-optimizer$optimise(2:1, 1:2)
 
 
 
@@ -160,11 +157,7 @@ setRefClass(
   )
 )
 
-optimizer <- new("Adam")
-optimizer$optimise(2:1, 1:2)
-optimizer$optimise(2:1, -1:0)
 
-
-OPTIMIZER = list(sgd = SGD, momentum = Momentum, nesterov = Nesterov, 
-  adagrad = AdaGrad, rmsprpo = RMSprop, adam = Adam
-)
+# OPTIMIZER = list(sgd = SGD, momentum = Momentum, nesterov = Nesterov, 
+#  adagrad = AdaGrad, rmsprpo = RMSprop, adam = Adam
+# )
