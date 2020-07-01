@@ -63,7 +63,7 @@ nnet$fFeed <- function(nnet) {
   nnet$data$input0 <- input
   nnet$data$output <- output
 }
-nnet$train(200)
+nnet$train(500)
 nnet$loss
 
 nnet$data[nnet$params]

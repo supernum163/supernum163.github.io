@@ -331,9 +331,9 @@ MaxPool <- function(pool_h, pool_w, stride = 1, pad = 0) {
   }
 }
 
-LAYSER <- list(
+LAYER <- list(
   Convolution = Convolution, MaxPool = MaxPool, 
   Affine = Affine, ReLU = ReLU, Sigmoid = Sigmoid, 
   BatchNormalization = BatchNormalization, Dropout = Dropout,
-  LAST <- list(MeanSquared = MeanSquared, SoftmaxWithLoss = SoftmaxWithLoss)
+  LAST = list(MeanSquared = MeanSquared, SoftmaxWithLoss = SoftmaxWithLoss)
 )
