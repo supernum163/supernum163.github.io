@@ -1,5 +1,5 @@
 
-Affine <- function(nnet, n, outLayer = NULL) {
+Affine <- function(nnet, n = 5, outLayer = "Sigmoid") {
   self <- new.env()
   self$nnet <- nnet
   nnet$layerId <- nnet$layerId + 1
@@ -18,7 +18,7 @@ Affine <- function(nnet, n, outLayer = NULL) {
   nnet$weights <- append(nnet$weights, paste0("weight", self$layerId))
 
   self$forward <- function() {
-    self$input <<- self$nnet$get("input", self$layerId - 1)
+    self$input <- self$nnet$get("input", self$layerId - 1)
     weight <- nnet$get("weight", self$layerId)
     bias <- nnet$get("bias", self$layerId)
     output <- t(t(self$input %*% weight) + bias)
@@ -35,8 +35,7 @@ Affine <- function(nnet, n, outLayer = NULL) {
 
 
 
-ReLU <- function(nnet, n = 5) {
-  Affine(nnet, n, "ReLU")
+ReLU <- function(nnet) {
   self <- new.env()
   self$nnet <- nnet
   nnet$layerId <- nnet$layerId + 1
@@ -47,20 +46,19 @@ ReLU <- function(nnet, n = 5) {
   self$forward <- function() {
     input <- self$nnet$get("input", self$layerId - 1)
     self$zeros <- (input <= 0)
-    input[zeros] <- 0
+    input[self$zeros] <- 0
     self$nnet$set("input", self$layerId, input)
   }
   self$backward <- function() {
     feedback <- self$nnet$get("feedback", self$layerId)
-    feedback[self$zeros] <<- 0
+    feedback[self$zeros] <- 0
     self$nnet$set("feedback", self$layerId - 1, feedback)
   }
 }
 
 
 
-Sigmoid <- function(nnet, n = 5) {
-  Affine(nnet, n, "Sigmoid")
+Sigmoid <- function(nnet) {
   self <- new.env()
   self$nnet <- nnet
   nnet$layerId <- nnet$layerId + 1
@@ -97,7 +95,7 @@ SoftmaxWithLoss <- function(nnet, oneHot = TRUE) {
     if (oneHot) {
       classes <- dim(input)[2]
       self$y <- array(0, dim = c(self$nnet$batch, classes))
-      for (i in 1:classes) self$y[i, yTrue[i]] <- 1
+      for (i in 1:self$nnet$batch) self$y[i, yTrue[i]] <- 1
     } 
     self$nnet$loss <- -sum(self$y * log(self$output + KSI)) / self$nnet$batch
   }
@@ -117,6 +115,7 @@ MeanSquared <- function(nnet) {
   nnet$layers[paste0("MeanSquared", self$layerId)] <- list(self)
   self$forward <- function() {
     self$output <- self$nnet$get("input", self$layerId - 1)
+    self$nnet$set("input", self$layerId, self$output)
     self$yTrue <- self$nnet$get("output")
     self$nnet$loss <- sum((self$yTrue - self$output) ^ 2) / self$nnet$batch / 2
   }
@@ -162,7 +161,7 @@ BatchNormalization <- function(nnet, gamma = numeric(0), beta = numeric(0),
     input <- self$nnet$get("input", self$layerId - 1)
     self$Di <- dim(input)
     if (length(self$Di) != 2) {
-      dims(input) <- c(shape[1], self$Noutput)
+      dims(input) <- c(self$Di[1], self$Noutput)
     } 
     if (self$nnet$task == "train") {
       self$mu <- apply(input, 2, mean)
@@ -185,7 +184,7 @@ BatchNormalization <- function(nnet, gamma = numeric(0), beta = numeric(0),
   self$backward <- function() {
     feedback <- self$nnet$get("feedback", self$layerId)
     if (length(self$Di) != 2) {
-      dims(feedback) <- c(shape[1], self$Noutput)
+      dims(feedback) <- c(self$Di[1], self$Noutput)
     }
     nnet$set("Dgamma", self$layerId, apply(self$xn * feedback, 2, sum))
     nnet$set("Dbeta", self$layerId, apply(feedback, 2, sum))
@@ -194,17 +193,17 @@ BatchNormalization <- function(nnet, gamma = numeric(0), beta = numeric(0),
     dxc <- dxn / self$std
     dstd <- -apply(dxn * self$xc / self$std ^ 2, 2, sum)
     dvar <- 0.5 * dstd / self$std
-    dxc <- dxc + 2 / shape[1] * self$xc * dvar
+    dxc <- dxc + 2 / self$Di[1] * self$xc * dvar
     dmu <- apply(dxc, 2, sum)
-    feedback <- dxc - dmu / shape[1]
-    dim(feedback) <- shape
+    feedback <- dxc - dmu / self$Di[1]
+    dim(feedback) <- self$Di
     self$nnet$set("feedback", self$layerId - 1, feedback)
   }
 }
 
 
 
-Dropout <- function(ratio, drop = TRUE) {
+Dropout <- function(nnet, ratio = 0.5, drop = TRUE) {
   self <- new.env()
   self$nnet <- nnet
   nnet$layerId <- nnet$layerId + 1
@@ -217,11 +216,11 @@ Dropout <- function(ratio, drop = TRUE) {
   self$forward <- function() {
     input <- self$nnet$get("input", self$layerId - 1)
     if (self$drop) {
-      self$dropout <- runif(ncol(input), 0, 1) > ratio
-      output <- t(t(input) * dropout)
+      self$dropout <- runif(ncol(input), 0, 1) > self$ratio
+      output <- t(t(input) * self$dropout)
     } else {
-      self$dropout <- 1 - ratio
-      output <- input * dropout
+      self$dropout <- 1 - self$ratio
+      output <- input * self$dropout
     }
     self$nnet$set("input", self$layerId, output)
   }
@@ -234,14 +233,19 @@ Dropout <- function(ratio, drop = TRUE) {
 
 
 
-Convolution <- function(filter, bias, stride = 1, pad = 0) {
+Convolution <- function(nnet, filter_size = 1, filter_h = 3, filter_w = 3, stride = 1, pad = 0, castToMat = FALSE) {
   self <- new.env()
   self$nnet <- nnet
   nnet$layerId <- nnet$layerId + 1
   self$layerId <- nnet$layerId
   nnet$layers[paste0("Convolution", self$layerId)] <- list(self)
   input <- self$nnet$get("input", self$layerId - 1)
+  self$Di <- dim(input)
+  self$Df <- c(filter_size, self$Di[2], filter_h, filter_w)
+  filter <- rnorm(prod(self$Df))
+  dim(filter) <- self$Df
   nnet$set("filter", self$layerId, filter)
+  bias <- rnorm(filter_size)
   nnet$set("bias", self$layerId, bias)
   nnet$params <- append(nnet$params, paste0("filter", self$layerId))
   nnet$Dparams <- append(nnet$Dparams, paste0("Dfilter", self$layerId))
@@ -249,36 +253,36 @@ Convolution <- function(filter, bias, stride = 1, pad = 0) {
   nnet$Dparams <- append(nnet$Dparams, paste0("Dbias", self$layerId))
   self$stride <- stride
   self$pad <- pad
-  self$Di <- dim(input)
-  self$Df <- dim(filter)
+  self$castToMat <- castToMat
   self$out_h <- floor((self$Di[3] + 2 * self$pad - self$Df[3]) / self$stride) + 1
   self$out_w <- floor((self$Di[4] + 2 * self$pad - self$Df[4]) / self$stride) + 1
-  output <- array(0, dim(Di[1], Df[1], self$out_h, self$out_w))
+  output <- array(0, dim = c(self$Di[1], self$Df[1], self$out_h, self$out_w))
+  if (self$castToMat) dim(output) <- c(self$Di[1], length(output) / self$Di[1])
+  nnet$set("input", self$layerId, output)
   self$col_W <- filter
   dim(self$col_W) <- c(self$Df[1], self$Df[2] * self$Df[3] * self$Df[4])
   self$col_W <- t(self$col_W)
-  nnet$set("input", self$layerId, output)
   self$forward <- function() {
     input <- self$nnet$get("input", self$layerId - 1)
     bias <- self$nnet$get("bias", self$layerId)
     self$Di <- dim(input)
     self$col <- img2col(input, self$Di, self$Df, self$out_h, self$out_w, self$stride, self$pad)
     output <- t(t(self$col %*% self$col_W) + bias)
-    dim(output) <- c(Di[1], out_h, out_w, Df[1])
+    dim(output) <- c(self$Di[1], self$out_h, self$out_w, self$Df[1])
     output <- transpos(output, c(1, 4, 2, 3))
+    if (self$castToMat) dim(output) <- c(self$Di[1], length(output) / self$Di[1])
     self$nnet$set("input", self$layerId, output)
   }
   self$backward <- function() {
     feedback <- self$nnet$get("feedback", self$layerId)
+    if (self$castToMat) dim(feedback) <- c(self$Di[1], self$Df[1], self$out_h, self$out_w)
     feedback <- transpos(feedback, c(1, 3, 4, 2))
     dim(feedback) <- c(self$Di[1] * self$out_h * self$out_w , self$Df[1])
-    Dbias <- feedback
-    dim(Dbias) <- c(self$Df[1], self$Di[1] * self$out_h * self$out_w)
-    Dbias <- apply(Dbias, 1, sum)
+    Dbias <- apply(feedback, 2, sum)
     self$nnet$set("Dbias", self$layerId, Dbias)
     Dfilter <- t(self$col) %*% feedback
     Dfilter <- transpos(Dfilter, c(2, 1))
-    dim(Dfilter) <- Df
+    dim(Dfilter) <- self$Df
     self$nnet$set("Dfilter", self$layerId, Dfilter)
     feedback <- feedback %*% t(self$col_W)
     feedback <- col2img(feedback, self$Di, self$Df, self$out_h, self$out_w, self$stride, self$pad)
@@ -288,45 +292,46 @@ Convolution <- function(filter, bias, stride = 1, pad = 0) {
 
 
 
-MaxPool <- function(pool_h, pool_w, stride = 1, pad = 0) {
+MaxPool <- function(nnet, filter_h = 3, filter_w = 3, stride = 1, pad = 0, castToMat = FALSE) {
   self <- new.env()
   self$nnet <- nnet
   nnet$layerId <- nnet$layerId + 1
   self$layerId <- nnet$layerId
   nnet$layers[paste0("MaxPool", self$layerId)] <- list(self)
   input <- self$nnet$get("input", self$layerId - 1)
-  self$pool_h <- pool_h
-  self$pool_w <- pool_w
-  elf$stride <- stride
+  self$stride <- stride
   self$pad <- pad
-  self$pool_size <- pool_h * pool_w
+  self$castToMat <- castToMat
+  self$pool_size <- filter_h * filter_w
   self$Di <- dim(input)
-  self$Df <- c(1, Di[2], pool_h, pool_w)
-  self$out_h <- floor((self$Di[3] + 2 * self$pad - pool_h) / self$stride) + 1
-  self$out_w <- floor((self$Di[4] + 2 * self$pad - pool_w) / self$stride) + 1
-  output <- array(0, dim(Di[1], Di[2], self$out_h, self$out_w))
+  self$Df <- c(1, self$Di[2], filter_h, filter_w)
+  self$out_h <- floor((self$Di[3] + 2 * self$pad - filter_h) / self$stride) + 1
+  self$out_w <- floor((self$Di[4] + 2 * self$pad - filter_w) / self$stride) + 1
+  output <- array(0, dim = c(self$Di[1], self$Di[2], self$out_h, self$out_w))
+  if (self$castToMat) dim(output) <- c(self$Di[1], length(output) / self$Di[1])
   nnet$set("input", self$layerId, output)
   self$forward <- function() {
     input <- self$nnet$get("input", self$layerId - 1)
     self$Di <- dim(input)
     col <- img2col(input, self$Di, self$Df, self$out_h, self$out_w, self$stride, self$pad)
-    col <- img2col(input, Di, Dw, out_h, out_w, stride, pad)
     dim(col) <- c(self$Di[1] * self$out_h * self$out_w * self$Di[2], self$pool_size)
     self$arg_max <- apply(col, 1, which.max)
     self$input <- input
     output <- apply(col, 1, max)
     dim(output) <- c(self$Di[1], self$out_h, self$out_w, self$Di[2])
     output <- transpos(output, c(1, 4, 2, 3))
+    if (self$castToMat) dim(output) <- c(self$Di[1], length(output) / self$Di[1])
     self$nnet$set("input", self$layerId, output)
   }
   self$backward <- function() {
     feedback <- self$nnet$get("feedback", self$layerId)
+    if (self$castToMat) dim(feedback) <- c(self$Di[1], self$Df[1], self$out_h, self$out_w)
     feedback <- transpos(feedback, c(1, 3, 4, 2))
     dmax <- array(0, dim = c(length(feedback), self$pool_size))
     index <- 1:length(feedback) + (self$arg_max - 1) * self$pool_size
     dmax[index] <- as.vector(feedback)
-    dim(dmax) <- c(self$Di[1] * self$Di[2] * self$Dw[3] * self$Dw[4] , self$out_h * self$out_w)
-    feedback <- col2img(self$dmax, self$Di, self$Dw, self$out_h, self$out_w, self$stride, self$pad)
+    dim(dmax) <- c(self$Di[1] * self$Di[2] * self$Df[3] * self$Df[4] , self$out_h * self$out_w)
+    feedback <- col2img(dmax, self$Di, self$Df, self$out_h, self$out_w, self$stride, self$pad)
     self$nnet$set("feedback", self$layerId - 1, feedback)
   }
 }

@@ -21,12 +21,15 @@ fInitBias <- function(n) {
 
 # 求输出层预测概率
 softmax <- function(input) {
-  if(length(dim(input)) == 2) {
-    output <- t(apply(input, 1, function(x) {x - max(x)}))
-    output <- t(apply(output, 1, function(x) {exp(x) / sum(exp(x))}))
+  Di <- dim(input)
+  if(length(Di) == 2) {
+    output <- input - apply(input, 1, max)
+    output <- exp(output)
+    output <- output / apply(output, 1, sum)
   } else {
     output <- input - max(input)
-    output <- exp(x) / sum(exp(x))
+    output <- exp(output)
+    output <- output / sum(output)
   }
   return(output)
 }
@@ -74,40 +77,40 @@ transpos <- function(arr, pos) {
 }
 
 # 将4维图片对象转化为便于卷积的2维矩阵
-img2col <- function(input, Di, Dw, out_h, out_w, stride = 1, pad = 0) {
+img2col <- function(input, Di, Df, out_h, out_w, stride = 1, pad = 0) {
   if (pad > 0) {
     data <- array(0, dim = c(Di[1], Di[2], Di[3] + pad * 2, Di[4] + pad * 2))
     data[ , , (pad + 1):(Di[3] + pad), (pad + 1):(Di[4] + pad)] <- input
   } else {
     data <- input
   }
-  col <- array(0, dim = c(Di[1], Dw[2], Dw[3], Dw[4], out_h, out_w))
-  for (y in 1:Dw[3]) {
+  col <- array(0, dim = c(Di[1], Df[2], Df[3], Df[4], out_h, out_w))
+  for (y in 1:Df[3]) {
     y_max <- y + stride * out_h - 1
-    for (x in 1:Dw[4]) {
+    for (x in 1:Df[4]) {
       x_max <- x + stride * out_w - 1
       col[ , , y, x, , ] <- data[ , , seq(y, y_max, stride), seq(y, y_max, stride)]
     }
   }
   col <- transpos(col, c(1, 5, 6, 2, 3, 4))
-  dim(col) <- c(Di[1] * out_h * out_w, Dw[2] * Dw[3] * Dw[4])
+  dim(col) <- c(Di[1] * out_h * out_w, Df[2] * Df[3] * Df[4])
   return(col)
 }
 
 # 将卷积后的2维矩阵还原为4维图片对象
-col2img <- function(col, Di, Dw, out_h, out_w, stride = 1, pad = 0) {
-  dim(col) <- c(Di[1], out_h, out_w, Dw[2], Dw[3], Dw[4])
+col2img <- function(col, Di, Df, out_h, out_w, stride = 1, pad = 0) {
+  dim(col) <- c(Di[1], out_h, out_w, Df[2], Df[3], Df[4])
   col <- transpos(col, c(1, 4, 5, 6, 2, 3))
   img <- array(0, dim = c(Di[1], Di[2], Di[3] + pad * 2, Di[4] + pad * 2))
-  for (y in 1:Dw[3]) {
+  for (y in 1:Df[3]) {
     y_max <- y + stride * out_h - 1
-    for (x in 1:Dw[4]) {
+    for (x in 1:Df[4]) {
       x_max <- x + stride * out_w - 1
       img[ , , seq(y, y_max, stride), seq(y, y_max, stride)] <- 
       img[ , , seq(y, y_max, stride), seq(y, y_max, stride)] + col[ , , y, x, , ]
     }
   }
-  img <- img[ ,  , (pad + 1):(Di[3] + pad), (pad + 1):(Di[4] + pad)]
+  img <- img[ ,  , (pad + 1):(Di[3] + pad), (pad + 1):(Di[4] + pad), drop = FALSE]
   return(img)
 }
 

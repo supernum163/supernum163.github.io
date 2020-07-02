@@ -1,9 +1,3 @@
-setwd("nnet")
-
-source("utils.R")
-source("layers.R")
-source("optimizer.R")
-
 
 Nnet <- function(dim_input, dim_output, L2 = 0) {
   self <- new.env()
@@ -25,6 +19,8 @@ Nnet <- function(dim_input, dim_output, L2 = 0) {
   self$Dparams <- c()
   # 全链接层权重的集合，配合L2系数可以避免该权重过大
   self$weights <- c()
+  # 记录每次循环的损失值
+  self$losses <- c()
   # 获取数据
   self$get <- function(name, id = NULL) {
     if (length(name) <= 0) return(NULL)
@@ -36,40 +32,28 @@ Nnet <- function(dim_input, dim_output, L2 = 0) {
     name <- paste0(name, id)
     self$data[[name]] <- val
   }
+  # 训练神经网络
   self$train <- function(iters = 1000) {
-    self.task <- "train"
+    self$task <- "train"
     for (i in 1:iters) {
       self$fFeed(self)
       for (layer in self$layers) layer$forward()
       for (layer in rev(self$layers)) layer$backward()
       self$optimizer$optimise()
+      self$losses <- append(self$losses, self$loss)
     }
   }
-  
+  # 预测结果
+  self$predict <- function(input) {
+    self$task <- "predict"
+    self$data$input0 <- input
+    self$batch <- dim(input)[1]
+    for (layer in self$layers) layer$forward()
+    output <- self$get("input", self$layerId)
+    return(output)
+  }
+  # 返回对象自身
   return(self)
 }
-
-
-
-input <- matrix(c(-2, -1, 25, 6, 17, 4, -15, -6), nrow = 4, byrow = TRUE)
-output = array(c(1, 0, 0, 1), dim = c(4, 1))
-
-nnet <- Nnet(dim(input), dim(output))
-LAYER$Sigmoid(nnet, n = 2)
-LAYER$Sigmoid(nnet, n = 1)
-LAYER$LAST$MeanSquared(nnet)
-OPTIMIZER$SGD(nnet, lr = 0.1)
-nnet$fFeed <- function(nnet) {
-  nnet$data$input0 <- input
-  nnet$data$output <- output
-}
-nnet$train(500)
-nnet$loss
-
-nnet$data[nnet$params]
-nnet$data[nnet$Dparams]
-inputs <- ls(nnet$data, pattern = "input\\d+")
-nnet$data[inputs]
-nnet$data$input4
 
 
