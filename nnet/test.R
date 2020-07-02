@@ -39,18 +39,7 @@ nnet$fFeed <- function(nnet, n = 100) {
   close(label)
   close(train)
 }
-nnet$train(100)
-nnet$layers
-input <- nnet$data$input0
-a <- nnet$data$output
-b <- apply(nnet$data$input6, 1, which.max)
-sum(a == b)
-dim(nnet$data$input3)
-nnet$data$feedback4
-nnet$data$input4
-self <- nnet$layers[[7]]
-self$y
-
+nnet$train(1000)
 plot(nnet$losses)
 
 
@@ -65,7 +54,7 @@ LAYER$Sigmoid(nnet)
 LAYER$Affine(nnet, n = 1, "Sigmoid")
 LAYER$Sigmoid(nnet)
 LAYER$LAST$MeanSquared(nnet)
-OPTIMIZER$SGD(nnet, lr = 0.1)
+OPTIMIZER$Adam(nnet, lr = 0.1)
 nnet$fFeed <- function(nnet) {
   nnet$data$input0 <- input
   nnet$data$output <- output

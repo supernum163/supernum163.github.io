@@ -48,31 +48,35 @@ meanSquared <- function(yPred, yTrue) {
 
 
 
+
 # 高纬数组的维度之间进行互换
 transpos <- function(arr, pos) {
   old_dim <- dim(arr)
   new_dim <- old_dim[pos]
   dim_len <- length(old_dim)
-  vec <- as.vector(arr)
+  D <- list()
   for (i in dim_len:1) {
-    times <- 1
+    each <- 1
     j <- i - 1
     while (j >= 1) {
-      times <- times * old_dim[j]
+      each <- each * old_dim[j]
       j = j - 1
     }
-    repeats <- 1
+    times <- 1
     j <- i + 1
     while (j <= dim_len) {
-      repeats <- repeats * old_dim[j]
+      times <- times * old_dim[j]
       j = j + 1
     }
     d <- 1:old_dim[i]
-    d <- rep(d, each = times)
-    d <- rep(d, repeats)
-    vec <- vec[order(d)]
+    d <- rep(d, each = each, times = times)
+    D[[i]] <- d
   }
-  vec <- array(vec, new_dim)
+  D <- D[pos]
+  D$v <- as.vector(arr)
+  D <- as.data.frame(D)
+  for (i in 1:dim_len) D <- D[order(D[, i]), ]
+  vec <- array(D$v, new_dim)
   return(vec)
 }
 
@@ -89,7 +93,7 @@ img2col <- function(input, Di, Df, out_h, out_w, stride = 1, pad = 0) {
     y_max <- y + stride * out_h - 1
     for (x in 1:Df[4]) {
       x_max <- x + stride * out_w - 1
-      col[ , , y, x, , ] <- data[ , , seq(y, y_max, stride), seq(y, y_max, stride)]
+      col[ , , y, x, , ] <- data[ , , seq(y, y_max, stride), seq(x, x_max, stride)]
     }
   }
   col <- transpos(col, c(1, 5, 6, 2, 3, 4))
@@ -106,12 +110,27 @@ col2img <- function(col, Di, Df, out_h, out_w, stride = 1, pad = 0) {
     y_max <- y + stride * out_h - 1
     for (x in 1:Df[4]) {
       x_max <- x + stride * out_w - 1
-      img[ , , seq(y, y_max, stride), seq(y, y_max, stride)] <- 
-      img[ , , seq(y, y_max, stride), seq(y, y_max, stride)] + col[ , , y, x, , ]
+      img[ , , seq(y, y_max, stride), seq(x, x_max, stride)] <- 
+      img[ , , seq(y, y_max, stride), seq(x, x_max, stride)] + col[ , , y, x, , ]
     }
   }
   img <- img[ ,  , (pad + 1):(Di[3] + pad), (pad + 1):(Di[4] + pad), drop = FALSE]
   return(img)
 }
 
-
+# 将2维数组表示的图像图形化
+drawImg <- function(img) {
+  # m <- nrow(img)
+  # n <- ncol(img)
+  # plot.new()
+  # plot.window(c(0, n), c(0, m))
+  # for (i in 1:m) {
+  #   for (j in 1:n) {
+  #     rect(j - 1, m - i, j, m - i + 1, img[i, j])
+  #   }
+  # }
+  img <- t(img[nrow(img):1, ])
+  col <- seq(255, 0, -10)/ 255
+  col <- rgb(col, col, col)
+  filled.contour(img, col = col, plot.axes = F, asp = 1)
+}
