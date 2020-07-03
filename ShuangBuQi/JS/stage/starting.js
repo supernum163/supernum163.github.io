@@ -19,11 +19,8 @@ Starting.prototype = {
     this.fontSize = adapt.W_12
     this.text1_x = this.x1 + this.w1 / 2
     this.text1_y = this.y1 + this.w1 / 2
-    this.image_w = this.w1 / 2
-    this.image_x = this.x3 + (this.w1 - this.image_w) / 2
-    this.image_y = this.y1 + (this.w1 - this.image_w) / 2
-    this.text2_x = this.x1 + this.w2 / 2
-    this.text2_y = this.y3 + this.h2 / 2
+    this.text2_x = this.x3 + this.w1 / 2
+    this.text3_y = this.y3 + this.h2 / 2
   },
 
   draw: function(play) {
@@ -44,17 +41,19 @@ Starting.prototype = {
     ctx.font = 'bold ' + adapt.W_6 + 'px monospace'
     ctx.fillText("双步棋", adapt.W_2, adapt.H_4)
     // 难易度选项
+    ctx.font = 'normal '+ this.fontSize + 'px monospace'
     ctx.strokeRect(this.x1, this.y1, this.w1, this.w1)
-    ctx.font = 'normal ' + this.fontSize + 'px monospace'
     var msg = ["简单", "普通", "困难"][play.difficulty]
     ctx.fillText(msg, this.text1_x, this.text1_y)
     // 先后手选项
     ctx.strokeRect(this.x3, this.y1, this.w1, this.w1)
-    var img = Images[ ["restart", "restart"][play.camp] ]
-    ctx.drawImage(img, this.image_x, this.image_y, this.image_w, this.image_w)
+    ctx.fillStyle = ["", "red", "blue"][play.camp]
+    var msg = ["", "先手", "后手"][play.camp]
+    ctx.fillText(msg, this.text2_x, this.text1_y)
     // 开始游戏按钮
     ctx.strokeRect(this.x1, this.y3, this.w2, this.h2)
-    ctx.fillText("开始游戏", this.text2_x, this.text2_y)
+    ctx.fillStyle = "black"
+    ctx.fillText("开始游戏", adapt.W_2, this.text3_y)
   },
 
   handle: function(play, e) {
@@ -74,7 +73,7 @@ Starting.prototype = {
         play.difficulty = (play.difficulty + 1) % 3
       // 修改先后手
       else if (e.X > this.x3 && e.X < this.x4) 
-        play.camp = (play.camp + 1) % 2
+        play.camp = play.camp % 2 + 1
     } 
     // 点击开始游戏
     else if (e.Y > this.y3 && e.Y < this.y4 && 

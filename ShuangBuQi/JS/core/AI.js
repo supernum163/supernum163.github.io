@@ -48,11 +48,11 @@ AI.prototype = {
       pos.push([i, 4])
     } else {
       if (chess === 1) {
-        if (j === 3 && PUZZLE[i][4] === 2 && PUZZLE[i][5] === 0) pos.push([i, 5])
-        else if (j === 4 && PUZZLE[i][5] === 0) pos.push([i, 5])
-      } else {
         if (i === 3 && PUZZLE[4][j] === 2 && PUZZLE[5][j] === 0) pos.push([5, j])
         else if (i === 4 && PUZZLE[5][j] === 0) pos.push([5, j])
+      } else {
+        if (j === 3 && PUZZLE[i][4] === 2 && PUZZLE[i][5] === 0) pos.push([i, 5])
+        else if (j === 4 && PUZZLE[i][5] === 0) pos.push([i, 5])
       }
       for (var [istep, jstep] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
         var m = i + istep, n = j + jstep
@@ -209,7 +209,7 @@ AI.prototype = {
     }
 console.log(this.steps)
     // 判断最优着棋方案
-    if (this.steps[1].length === 0) return null
+    if (this.steps[1].length === 0) return PUZZLE
     for (var i = this.steps.length - 2; i >= 0 ; i--) {
       for (var node of this.steps[i]) {
         if (node.step < 0) continue
@@ -236,17 +236,19 @@ console.log(this.steps)
 
 
 var puzzle = [
-  [0, 2, 2, 2, 2, 0],
-  [1, 0, 0, 0, 0, 0],
-  [1, 0, 0, 0, 0, 0],
-  [1, 0, 0, 0, 0, 0],
-  [1, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0],
+  [ 0, 1, 1, 1, 1, -1],
+  [ 2, 0, 0, 0, 0,  0],
+  [ 2, 0, 0, 0, 0,  0],
+  [ 2, 0, 0, 0, 0,  0],
+  [ 2, 0, 0, 0, 0,  0],
+  [-1, 0, 0, 0, 0, -1],
 ]
 
+/*
 var ai = new AI()
-// ai.getScore(puzzle, 0)
-// ai.getShortPath(puzzle, 1, 0, 1, 5)
+ai.getScore(puzzle, 0)
+ai.getShortPath(puzzle, 1, 0, 1, 5)
 
-ai.smartMove(puzzle, 0, 12, 1)
+ai.smartMove(puzzle, 0, 4, 1)
 
+*/

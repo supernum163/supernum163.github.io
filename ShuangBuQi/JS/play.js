@@ -4,7 +4,7 @@ Play = function() {
   this.board = new Board()
   this.starting = new Starting()
   this.endding = new Endding()
-  this.camp = 0
+  this.camp = 1
   this.difficulty = 0
   this.result = 0
   // 游戏阶段， -1 加载界面，0 开始游戏界面，1 游戏过程，2 游戏结束
