@@ -19,13 +19,16 @@ Endding.prototype = {
     // 是否挑战成功
     ctx.textAlign = 'center'
     ctx.font = 'normal ' + adapt.W_12 + 'px monospace'
-    ctx.fillStyle = ["white", "red", "red"][play.result]
-    let msg = ["挑战继续", "恭喜获胜", "挑战失败"][play.result]
+    ctx.fillStyle = ["white", "red", "red", "black"][play.result]
+    let msg = ["挑战继续", "恭喜获胜", "挑战失败", "和局"][play.result]
     ctx.fillText(msg, adapt.W_2, adapt.H_2)
   },
 
   handle: function(play, e) {
-    if (Math.abs(e.Y - adapt.H_2) < adapt.W_12) play.stage = 0
+    if (Math.abs(e.Y - adapt.H_2) < adapt.W_12) {
+      play.result = 0
+      play.stage = 0
+    }
   }
 
 }

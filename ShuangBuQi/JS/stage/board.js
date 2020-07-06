@@ -19,12 +19,11 @@ Board.prototype = {
     // 决定自动走棋机器人需要考虑的回合数
     this.loops = [2, 4, 8][play.difficulty]
     // 开局0，玩家走棋1、2，AI走棋3、4，一方胜利5，终局6
-    this.progress = 0
+    this.round = (play.camp === 1) ? 2 : 4
     this.selected = []
     this.lastMove = []
     this.availPos = []
     this.resize()
-    this.progress = (play.camp === 1) ? 2 : 4
     this.AIwaits = 30
   },
   resize: function() {
@@ -105,19 +104,24 @@ Board.prototype = {
   },
   //计算机自动走棋 
   autoGo: function(play) {
-    if ([3, 4].indexOf(this.progress) < 0) return
+    if ([3, 4].indexOf(this.round) < 0) return
     if (this.AIwaits > 0) { this.AIwaits--; return }
-    this.puzzle = this.ai.smartMove(this.puzzle, this.camp, this.loops, this.progress)
-    this.AIwaits = 30
-    this.check(play)
+    this.puzzle = this.ai.smartMove(this.puzzle, this.camp, this.loops, this.round)
+    this.AIwaits = 60
+    this.check(play, 2)
   },
-  check : function(play) {
-    this.progress = this.progress % 4 + 1
+  check : function(play, finalRound) {
     var result = this.ai.success(this.puzzle, play.camp)
-    if (play.result !== 0) { 
-      play.result = (result === 0) ? play.result : 0
+    if (play.result === 0 && result !== 0) {
+      play.result = result
+      this.round = finalRound
+    } else if (play.result !== 0) {
+      console.log(result, play.result, this.puzzle)
+      play.result = result
       play.stage = 2
-    } else play.result = result
+    } else {
+      this.round = this.round % 4 + 1
+    }
   },
   // 将坐标点 [x, y] 转化为棋位 [i, j]
   getPos: function(e) {
@@ -141,7 +145,7 @@ Board.prototype = {
       e.Y > this.restartButton_h0 && e.Y < this.restartButton_h1
     ) { play.stage = 0; return }
     // 判断是否到玩家回合
-    if ([1, 2].indexOf(this.progress) < 0) return
+    if ([1, 2].indexOf(this.round) < 0) return
     // 判断是否点击某个棋位
     var [i, j] = this.getPos(e)
     // 点击空白区域
@@ -162,7 +166,7 @@ Board.prototype = {
       var [i, j] = this.selected
       this.puzzle[i][j] = 0
       this.selected = []
-      this.check(play)
+      this.check(play, 4)
     }
     
   }
