@@ -40,20 +40,19 @@ Starting.prototype = {
     ctx.strokeStyle = "black"
     ctx.font = 'bold ' + adapt.W_6 + 'px monospace'
     ctx.fillText("双步棋", adapt.W_2, adapt.H_4)
-    // 难易度选项
+    // 开始游戏按钮
     ctx.font = 'normal '+ this.fontSize + 'px monospace'
+    ctx.strokeRect(this.x1, this.y3, this.w2, this.h2)
+    ctx.fillText("开始游戏", adapt.W_2, this.text3_y)
+    // 难易度选项
     ctx.strokeRect(this.x1, this.y1, this.w1, this.w1)
-    var msg = ["简单", "普通", "困难"][play.difficulty]
+    var msg = ["简单", "普通"][play.difficulty]
     ctx.fillText(msg, this.text1_x, this.text1_y)
     // 先后手选项
+    // ctx.fillStyle = ["", "red", "blue"][play.camp]
     ctx.strokeRect(this.x3, this.y1, this.w1, this.w1)
-    ctx.fillStyle = ["", "red", "blue"][play.camp]
     var msg = ["", "先手", "后手"][play.camp]
     ctx.fillText(msg, this.text2_x, this.text1_y)
-    // 开始游戏按钮
-    ctx.strokeRect(this.x1, this.y3, this.w2, this.h2)
-    ctx.fillStyle = "black"
-    ctx.fillText("开始游戏", adapt.W_2, this.text3_y)
   },
 
   handle: function(play, e) {
@@ -70,7 +69,7 @@ Starting.prototype = {
     else if (e.Y > this.y1 && e.Y < this.y2) {
       // 修改难易度
       if (e.X > this.x1 && e.X < this.x2)
-        play.difficulty = (play.difficulty + 1) % 3
+        play.difficulty = (play.difficulty + 1) % 2
       // 修改先后手
       else if (e.X > this.x3 && e.X < this.x4) 
         play.camp = play.camp % 2 + 1

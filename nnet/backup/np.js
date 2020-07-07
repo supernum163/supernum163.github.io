@@ -263,3 +263,4 @@ var nnet = new Nnet(config)
 //nnet.learn()
 
 nnet.train()
+

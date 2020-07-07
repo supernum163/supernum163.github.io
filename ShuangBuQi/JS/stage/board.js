@@ -7,17 +7,17 @@ Board.prototype = {
   init: function(play) {
     // 6 * 6 棋盘，-1为不可到达位、0为空位、1为先手棋子、2为后手棋子
     this.puzzle = [
-      [ 0, 1, 1, 1, 1, -1],
-      [ 2, 0, 0, 0, 0,  0],
-      [ 2, 0, 0, 0, 0,  0],
-      [ 2, 0, 0, 0, 0,  0],
-      [ 2, 0, 0, 0, 0,  0],
-      [-1, 0, 0, 0, 0, -1],
+      [ 0,  1,  1,  1,  1, -1],
+      [ 2,  0,  0,  0,  0,  0],
+      [ 2,  0,  0,  0,  0,  0],
+      [ 2,  0,  0,  0,  0,  0],
+      [ 2,  0,  0,  0,  0,  0],
+      [-1,  0,  0,  0,  0, -1],
     ]
     // 自动走棋机器人的阵营
     this.camp = play.camp % 2 + 1
     // 决定自动走棋机器人需要考虑的回合数
-    this.loops = [2, 4, 8][play.difficulty]
+    this.loops = [2, 6][play.difficulty]
     // 开局0，玩家走棋1、2，AI走棋3、4，一方胜利5，终局6
     this.round = (play.camp === 1) ? 2 : 4
     this.selected = []
@@ -42,12 +42,11 @@ Board.prototype = {
     this.restartButton_h1 = this.restartButton_h0 + this.restartButton_w
   },
   draw: function(play) {
-    this.autoGo(play)
     // 游戏标题
     ctx.textAlign = 'center'
     ctx.fillStyle = "black"
     ctx.font = 'bold ' + adapt.W_6 + 'px monospace'
-    ctx.fillText("双步棋", adapt.W_2, adapt.H * 0.15)    
+    ctx.fillText("双步棋", adapt.W_2, adapt.H * 0.15)
     // 绘制重新开始按钮
     ctx.drawImage(Images["restart"],
       this.restartButton_w0, this.restartButton_h0,
@@ -71,6 +70,8 @@ Board.prototype = {
     }
     ctx.stroke()
     // 绘制棋子
+    ctx.strokeStyle = "green"
+    var playerGo = ([3, 4].indexOf(this.round) < 0 && this.selected.length === 0)
     for (var i = 0; i < this.puzzle.length; i++) {
       for (j = 0; j < this.puzzle[i].length; j++) {
         var chess = this.puzzle[i][j]
@@ -81,6 +82,7 @@ Board.prototype = {
         ctx.arc(x, y, this.chessW_2, 0, Math.PI * 2)
         ctx.fillStyle = ["white", "red", "blue"][chess]
         ctx.fill()
+        if (playerGo && chess === play.camp) ctx.stroke()
       }
     }
     if (this.selected.length === 0) return
@@ -90,20 +92,21 @@ Board.prototype = {
     y = this.y0 - (i + j) * this.cellW
     ctx.beginPath()
     ctx.arc(x, y, this.chessW_2, 0, Math.PI * 2)
-    ctx.strokeStyle = "yellow"
     ctx.stroke()
     // 可以移往的棋位
+    ctx.fillStyle = "white"
     for (var pos of this.availPos) {
       var [i, j] = pos
       x = this.x0 + (i - j) * this.cellW
       y = this.y0 - (i + j) * this.cellW
       ctx.beginPath()
       ctx.arc(x, y, this.chessW_2, 0, Math.PI * 2)
+      ctx.fill()
       ctx.stroke()
     }
   },
-  //计算机自动走棋 
-  autoGo: function(play) {
+  // AI自动走棋 
+  update: function(play) {
     if ([3, 4].indexOf(this.round) < 0) return
     if (this.AIwaits > 0) { this.AIwaits--; return }
     this.puzzle = this.ai.smartMove(this.puzzle, this.camp, this.loops, this.round)
@@ -116,7 +119,6 @@ Board.prototype = {
       play.result = result
       this.round = finalRound
     } else if (play.result !== 0) {
-      console.log(result, play.result, this.puzzle)
       play.result = result
       play.stage = 2
     } else {
@@ -154,12 +156,10 @@ Board.prototype = {
       return
     } 
     // 选中某个棋子
-    if (this.selected.length === 0) {
-      if (this.puzzle[i][j] === play.camp) {
-        this.selected = [i, j]
-        this.availPos = this.ai.availPos(this.puzzle, i, j)
-      }
-    } 
+    if (this.puzzle[i][j] === play.camp) {
+      this.selected = [i, j]
+      this.availPos = this.ai.availPos(this.puzzle, i, j)
+    }
     // 将选中的棋子移动至某个棋位
     else if (this.availPos.some(e => e[0] === i && e[1] === j)) {
       this.puzzle[i][j] = play.camp
@@ -168,7 +168,6 @@ Board.prototype = {
       this.selected = []
       this.check(play, 4)
     }
-    
   }
 
 }

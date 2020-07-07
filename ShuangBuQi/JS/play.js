@@ -47,6 +47,7 @@ Play.prototype = {
       this.starting.draw(this)
     }
     else if (this.stage === 1) {
+      this.board.update(this)
       this.board.draw(this)
     }
     else if (this.stage === 2){

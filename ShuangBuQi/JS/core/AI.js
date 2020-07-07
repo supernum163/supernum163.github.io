@@ -92,18 +92,17 @@ AI.prototype = {
           var m = s[0] + istep, n = s[1] + jstep
           if (m < 0 || m > this.rank - 1 || n < 0 || n > this.rank - 1) continue
           if (PUZZLE[m][n] === chess % 2 + 1) {
-            if (chess === 1 && s[1] === 3 && n === 4) n = 5
-            else if (chess === 2 && s[0] === 3 && m === 4) m = 5
+            if (chess === 1 && s[0] === 3 && m === 4) m = 5
+            else if (chess === 2 && s[1] === 3 && n === 4) n = 5
             else continue
           }
           var id = m * 6 + n
-          if ([5, 30, 35].includes(id)) continue
-          if (idMat.includes(id)) continue
+          if ([5, 30, 35].includes(id) || idMat.includes(id)) continue
           idMat.push(id)
           steps[loop + 1].push([m, n])
         }
       }
-      if (steps[loop + 1].length === 0) return maxLoop
+      if (steps[loop + 1].length === 0) return loop
     }
     return maxLoop
   },
@@ -162,7 +161,7 @@ AI.prototype = {
         var success = this.success(node.P, camp)
         if (success > 0) {
           node.score += [0, 100, -100, 0][success]
-          node.step = -1
+          node.step = (loop === 0) ? step : -1
         }
         if (node.step === -1) continue
         node.score = AImove ? -Infinity : Infinity
@@ -219,7 +218,7 @@ AI.prototype = {
       if (child.score > pointer.score) pointer = child
       else if (child.score === pointer.score && Math.random() < 0.5) pointer = child
     }
-    if (pointer === null) return this.move(PUZZLE, CAMP)[0]
+    if (pointer === null) return PUZZLE
     return pointer.P
   }
 
