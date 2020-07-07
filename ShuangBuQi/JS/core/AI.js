@@ -18,13 +18,14 @@ AI.prototype = {
   },
   // 由盘面生成博弈树结点，step表示盘面位于现有博弈树的第几层，没有则为Infinity
   getNode(PUZZLE) {
-    var id = 0
+    var vec = []
     for (var i = 0; i < this.rank; i++) {
       for (var j = 0; j < this.rank; j++) {
-        if (PUZZLE[i][j] === 0) continue
-        id = id * 100 + (i* 6 + j) * PUZZLE[i][j]
+        if (PUZZLE[i][j] <= 0) continue
+        vec.push(PUZZLE[i][j] * 100 + i * 10 + j)
       }
     }
+    var id = vec.sort().toString()
     if (this.idMat[id] === undefined) 
       this.idMat[id] = { P: PUZZLE, children: [], step: Infinity, score: undefined }
     return this.idMat[id]
@@ -102,7 +103,7 @@ AI.prototype = {
           steps[loop + 1].push([m, n])
         }
       }
-      if (steps[loop + 1].length === 0) return loop
+      if (steps[loop + 1].length === 0) return maxLoop
     }
     return maxLoop
   },
@@ -227,19 +228,18 @@ AI.prototype = {
 
 /*
 var puzzle = [
-  [ 0, 1, 1, 1, 1, -1],
-  [ 2, 0, 0, 0, 0,  2],
-  [ 2, 0, 0, 0, 0,  2],
-  [ 2, 0, 1, 0, 0,  2],
-  [ 2, 0, 0, 0, 0,  2],
-  [-1, 0, 1, 1, 1, -1],
+  [ 0,  1,  1,  1,  1, -1],
+  [ 2,  0,  0,  0,  0,  0],
+  [ 2,  0,  0,  0,  0,  0],
+  [ 2,  0,  0,  0,  0,  0],
+  [ 2,  0,  0,  0,  0,  0],
+  [-1,  0,  0,  0,  0, -1],
 ]
 
 var ai = new AI()
-ai.success(puzzle, 1)
-
 ai.smartMove(puzzle, 1, 4, 4)
 
+ai.success(puzzle, 1)
 ai.getScore(puzzle, 0)
 ai.getShortPath(puzzle, 1, 0, 1, 5)
 
