@@ -91,6 +91,7 @@ SoftmaxWithLoss <- function(nnet, oneHot = TRUE) {
     input <- self$nnet$get("input", self$layerId - 1)
     self$output <- softmax(input)
     self$nnet$set("input", self$layerId, self$output)
+    if (self$nnet$task == "predict") return(NULL)
     yTrue <- self$nnet$get("output")
     if (oneHot) {
       classes <- dim(input)[2]
@@ -116,6 +117,7 @@ MeanSquared <- function(nnet) {
   self$forward <- function() {
     self$output <- self$nnet$get("input", self$layerId - 1)
     self$nnet$set("input", self$layerId, self$output)
+    if (self$nnet$task == "predict") return(NULL)
     self$yTrue <- self$nnet$get("output")
     self$nnet$loss <- sum((self$yTrue - self$output) ^ 2) / self$nnet$batch / 2
   }
@@ -259,13 +261,13 @@ Convolution <- function(nnet, filter_size = 1, filter_h = 3, filter_w = 3, strid
   output <- array(0, dim = c(self$Di[1], self$Df[1], self$out_h, self$out_w))
   if (self$castToMat) dim(output) <- c(self$Di[1], length(output) / self$Di[1])
   nnet$set("input", self$layerId, output)
-  self$col_W <- filter
-  dim(self$col_W) <- c(self$Df[1], self$Df[2] * self$Df[3] * self$Df[4])
-  self$col_W <- t(self$col_W)
   self$forward <- function() {
     input <- self$nnet$get("input", self$layerId - 1)
     bias <- self$nnet$get("bias", self$layerId)
     self$Di <- dim(input)
+    self$col_W <- nnet$get("filter", self$layerId)
+    dim(self$col_W) <- c(self$Df[1], self$Df[2] * self$Df[3] * self$Df[4])
+    self$col_W <- t(self$col_W)
     self$col <- img2col(input, self$Di, self$Df, self$out_h, self$out_w, self$stride, self$pad)
     output <- t(t(self$col %*% self$col_W) + bias)
     dim(output) <- c(self$Di[1], self$out_h, self$out_w, self$Df[1])

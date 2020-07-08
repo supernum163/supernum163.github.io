@@ -102,8 +102,8 @@ input <- c(
   -1, -1,  1,   0, -1,  1,   1,  0, -1, 
   -1, -1,  1,   0, -1,  1,   0,  1, -1
 )
-input <- matrix(input, ncol = 9, byrow = TRUE)
-input <- array(input, dim = c(90, 1, 3, 3))
+input <- array(input, dim = c(3, 3, 1, 90))
+input <- transpos(input, 4:1)
 # 1表示两方都没有获胜， 2表示先手方获胜，3表示后手方获胜
 output <- rep(1:3, each = 30)
 output <- matrix(output, ncol = 1)
@@ -112,8 +112,8 @@ output <- matrix(output, ncol = 1)
 nnet <- Nnet(dim(input), dim(output))
 LAYER$Convolution(nnet, filter_size = 16, filter_h = 3, filter_w = 3, castToMat = TRUE)
 LAYER$ReLU(nnet)
-LAYER$Affine(nnet, n = 3, "ReLU")
-LAYER$LAST$SoftmaxWithLoss(nnet)
+LAYER$Affine(nnet, n = 1)
+LAYER$LAST$MeanSquared(nnet)
 OPTIMIZER$Adam(nnet, lr = 0.1)
 nnet$fFeed <- function(nnet) {
   n <- sample(1:90, 30)
@@ -121,11 +121,12 @@ nnet$fFeed <- function(nnet) {
   nnet$data$output <- output[n, , drop = FALSE]
   nnet$batch <- 30
 }
-nnet$train(500)
+
+nnet$train(200)
 plot(nnet$losses)
 pred <- nnet$predict(input)
-yhat <- apply(pred, 1, which.max)
-sum(yhat == as.vector(output)) / 90
+yhat <- round(pred)
+sum(yhat == output) / 90
 
 # 测试训练结果
 test <- c(  
@@ -142,8 +143,33 @@ test <- c(
 test <- matrix(test, ncol = 9, byrow = TRUE)
 test <- array(test, dim = c(9, 1, 3, 3))
 pred <- nnet$predict(test)
-apply(pred, 1, which.max)
+round(pred)
 
 # 这里样本数量还是不够，容易过度拟合
+# 正确的权重应该如下
+filter <- c(
+   1,  1,  1,   0,  0,  0,   0,  0,  0,
+   0,  0,  0,   1,  1,  1,   0,  0,  0,
+   0,  0,  0,   0,  0,  0,   1,  1,  1,
+   1,  0,  0,   1,  0,  0,   1,  0,  0,
+   0,  1,  0,   0,  1,  0,   0,  1,  0,
+   0,  0,  1,   0,  0,  1,   0,  0,  1,
+   1,  0,  0,   0,  1,  0,   0,  0,  1,
+   0,  0,  1,   0,  1,  0,   1,  0,  0,
+  -2, -2, -2,   0,  0,  0,   0,  0,  0,
+   0,  0,  0,  -2, -2, -2,   0,  0,  0,
+   0,  0,  0,   0,  0,  0,  -2, -2, -2,
+  -2,  0,  0,  -2,  0,  0,  -2,  0,  0,
+   0, -2,  0,   0, -2,  0,   0, -2,  0,
+   0,  0, -2,   0,  0, -2,   0,  0, -2,
+  -2,  0,  0,   0, -2,  0,   0,  0, -2,  
+   0,  0, -2,   0, -2,  0,  -2,  0,  0
+)
+filter <- array(filter, dim = c(3, 3, 1, 16))
+filter <- transpos(filter, 4:1)
+nnet$data$filter1 <- filter
+nnet$data$bias1 <- rep(c(-2, -4), each = 8)
+nnet$data$weight3 <- array(1, dim = c(16, 1))
+nnet$data$bias3 <- 1
 
 

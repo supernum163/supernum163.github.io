@@ -63,6 +63,10 @@ nnet$fFeed <- function(nnet, n = 100) {
 nnet$train(1000)
 plot(nnet$losses)
 
+pred <- nnet$predict(nnet$data$input0)
+pred <- apply(pred, 1, which.max)
+sum(nnet$data$output == pred) / nnet$batch
+
 
 
 # 神经网络中的关键信息

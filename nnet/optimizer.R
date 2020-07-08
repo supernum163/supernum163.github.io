@@ -111,8 +111,8 @@ Adam <- function(nnet, lr = 0.01, beta1 = 0.9, beta2 = 0.999) {
     for (i in 1:length((self$nnet$params))) {
       param <- self$nnet$get(self$nnet$params[i])
       Dparam <- self$nnet$get(self$nnet$Dparams[i])
-      self$m[[i]] <<- self$beta1 * self$m[[i]] + (1 - self$beta1) * Dparam
-      self$v[[i]] <<- self$beta2 * self$v[[i]] + (1 - self$beta2) * Dparam ^ 2
+      self$m[[i]] <- self$beta1 * self$m[[i]] + (1 - self$beta1) * Dparam
+      self$v[[i]] <- self$beta2 * self$v[[i]] + (1 - self$beta2) * Dparam ^ 2
       param <- param - lr_t * self$m[[i]] / (sqrt(self$v[[i]]) + KSI)
       self$nnet$set(self$nnet$params[i], val = param)
     }
