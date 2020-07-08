@@ -83,12 +83,12 @@ AI.prototype = {
   },
   // 使用广度搜索，寻找从 [i, j] 移动到 [x, y] 最短需要多少步骤
   getShortPath(PUZZLE, i, j, x, y) {
-    var chess = PUZZLE[i][j], maxLoop = 3 * this.rank - 5
+    var chess = PUZZLE[i][j], maxLoop = 13
     var steps = [[[i, j]]], idMat = [i * 6 + j]
     for (var loop = 0; loop < maxLoop; loop++) {
       steps[loop + 1] = []
       for (var s of steps[loop]) {
-        if (s[0] === x && s[1] === y) return steps.length - 2
+        if (s[0] === x && s[1] === y) return steps.length - 1
         for (var [istep, jstep] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
           var m = s[0] + istep, n = s[1] + jstep
           if (m < 0 || m > this.rank - 1 || n < 0 || n > this.rank - 1) continue
@@ -103,9 +103,9 @@ AI.prototype = {
           steps[loop + 1].push([m, n])
         }
       }
-      if (steps[loop + 1].length === 0) return maxLoop
+      if (steps[loop + 1].length === 0) return maxLoop - 1
     }
-    return maxLoop
+    return maxLoop - 1
   },
   // 对当前局势的评价函数
   getScore(PUZZLE, CAMP) {
@@ -226,6 +226,7 @@ AI.prototype = {
 }
 
 
+
 /*
 var puzzle = [
   [ 0,  1,  1,  1,  1, -1],
@@ -239,9 +240,7 @@ var puzzle = [
 var ai = new AI()
 ai.smartMove(puzzle, 1, 4, 4)
 
-ai.success(puzzle, 1)
-ai.getScore(puzzle, 0)
+ai.getScore(puzzle, 1)
 ai.getShortPath(puzzle, 1, 0, 1, 5)
-
 
 */

@@ -34,12 +34,17 @@ Board.prototype = {
     this.cellW = 0.09 * adapt.W
     this.chessW = 0.1 * adapt.W
     this.chessW_2 = this.chessW / 2
+    // 底部功能按钮宽度
+    this.buttonW = 0.2 * adapt.W
+    this.buttonW_2 = this.buttonW / 2
     // 重新开始按钮关键位置
-    this.restartButton_w = 0.2 * adapt.W
-    this.restartButton_w0 = adapt.W_2 - this.restartButton_w / 2
-    this.restartButton_w1 = this.restartButton_w0 + this.restartButton_w
-    this.restartButton_h0 = adapt.H_4 * 3 + adapt.W_4 - this.restartButton_w / 2
-    this.restartButton_h1 = this.restartButton_h0 + this.restartButton_w
+    this.Brestart_x0 = adapt.W_3 - this.buttonW_2
+    this.Brestart_x1 = this.Brestart_x0 + this.buttonW
+    this.Brestart_y0 = adapt.H_4 * 3 + adapt.W_4 - this.buttonW_2
+    this.Brestart_y1 = this.Brestart_y0 + this.buttonW
+    // 回合按钮关键位置
+    this.Bround_x = adapt.W_3 * 2
+    this.Bround_y = adapt.H_4 * 3 + adapt.W_4
   },
   draw: function(play) {
     // 游戏标题
@@ -49,8 +54,7 @@ Board.prototype = {
     ctx.fillText("双步棋", adapt.W_2, adapt.H * 0.15)
     // 绘制重新开始按钮
     ctx.drawImage(Images["restart"],
-      this.restartButton_w0, this.restartButton_h0,
-      this.restartButton_w, this.restartButton_w
+      this.Brestart_x0, this.Brestart_y0, this.buttonW, this.buttonW
     )
     // 绘制棋盘
     ctx.strokeStyle = "black"
@@ -71,7 +75,8 @@ Board.prototype = {
     ctx.stroke()
     // 绘制棋子
     ctx.strokeStyle = "green"
-    var playerGo = ([3, 4].indexOf(this.round) < 0 && this.selected.length === 0)
+    var playerGo = [3, 4].indexOf(this.round) < 0 
+    var playerChoose = playerGo && this.selected.length === 0
     for (var i = 0; i < this.puzzle.length; i++) {
       for (j = 0; j < this.puzzle[i].length; j++) {
         var chess = this.puzzle[i][j]
@@ -82,19 +87,26 @@ Board.prototype = {
         ctx.arc(x, y, this.chessW_2, 0, Math.PI * 2)
         ctx.fillStyle = ["white", "red", "blue"][chess]
         ctx.fill()
-        if (playerGo && chess === play.camp) ctx.stroke()
+        if (playerChoose && play.camp === chess) ctx.stroke()
       }
     }
+    // 绘制回合按钮
+    ctx.beginPath()
+    ctx.arc(this.Bround_x, this.Bround_y, this.buttonW_2, 0, Math.PI * 2)
+    ctx.fillStyle = (playerGo ^ (play.camp === 1)) ? "blue" : "red"
+    ctx.fill()
+    ctx.fillStyle = "white"
+    ctx.font = 'bold ' + adapt.W_12 + 'px monospace'
+    ctx.fillText(this.round, this.Bround_x, this.Bround_y)
+    // 强调被选中的棋子
     if (this.selected.length === 0) return
-    // 被选中的棋子
     var [i, j] = this.selected
     x = this.x0 + (i - j) * this.cellW
     y = this.y0 - (i + j) * this.cellW
     ctx.beginPath()
     ctx.arc(x, y, this.chessW_2, 0, Math.PI * 2)
     ctx.stroke()
-    // 可以移往的棋位
-    ctx.fillStyle = "white"
+    // 绘制可以移往的棋位
     for (var pos of this.availPos) {
       var [i, j] = pos
       x = this.x0 + (i - j) * this.cellW
@@ -143,11 +155,15 @@ Board.prototype = {
   // 处理点击、拖动事件
   handle: function(play, e) {
     // 点击重新开始
-    if (e.X > this.restartButton_w0 && e.X < this.restartButton_w1 &&
-      e.Y > this.restartButton_h0 && e.Y < this.restartButton_h1
+    if (e.X > this.Brestart_x0 && e.X < this.Brestart_x1 &&
+      e.Y > this.Brestart_y0 && e.Y < this.Brestart_y1
     ) { play.stage = 0; return }
     // 判断是否到玩家回合
     if ([1, 2].indexOf(this.round) < 0) return
+    // 点击回合按钮时，跳过当前回合
+    if (this.buttonW_2 ** 2 > 
+      (e.X - this.Bround_x) ** 2 + (e.Y - this.Bround_y) ** 2
+    ) { this.round = this.round % 4 + 1; return }
     // 判断是否点击某个棋位
     var [i, j] = this.getPos(e)
     // 点击空白区域
