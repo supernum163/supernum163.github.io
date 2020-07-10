@@ -16,8 +16,8 @@ AI.prototype = {
     // 博弈树
     this.steps = [[ this.root ]]
   },
-  // 由盘面生成博弈树结点，step表示盘面位于现有博弈树的第几层，没有则为Infinity
-  getNode(PUZZLE) {
+  // 获取谜题对应的ID
+  getPuzzleId(PUZZLE) {
     var vec = []
     for (var i = 0; i < this.rank; i++) {
       for (var j = 0; j < this.rank; j++) {
@@ -25,7 +25,11 @@ AI.prototype = {
         vec.push(PUZZLE[i][j] * 100 + i * 10 + j)
       }
     }
-    var id = vec.sort().toString()
+    return vec.sort().toString()
+  },
+  // 由盘面生成博弈树结点，step表示盘面位于现有博弈树的第几层，没有则为Infinity
+  getNode(PUZZLE) {
+    var id = this.getPuzzleId(PUZZLE)
     if (this.idMat[id] === undefined) 
       this.idMat[id] = { P: PUZZLE, children: [], step: Infinity, score: undefined }
     return this.idMat[id]
@@ -81,49 +85,13 @@ AI.prototype = {
     }
     return puzzles
   },
-  // 使用广度搜索，寻找从 [i, j] 移动到 [x, y] 最短需要多少步骤
-  getShortPath(PUZZLE, i, j, x, y) {
-    var chess = PUZZLE[i][j], maxLoop = 13
-    var steps = [[[i, j]]], idMat = [i * 6 + j]
-    for (var loop = 0; loop < maxLoop; loop++) {
-      steps[loop + 1] = []
-      for (var s of steps[loop]) {
-        if (s[0] === x && s[1] === y) return steps.length - 1
-        for (var [istep, jstep] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-          var m = s[0] + istep, n = s[1] + jstep
-          if (m < 0 || m > this.rank - 1 || n < 0 || n > this.rank - 1) continue
-          if (PUZZLE[m][n] === chess % 2 + 1) {
-            if (chess === 1 && s[0] === 3 && m === 4) m = 5
-            else if (chess === 2 && s[1] === 3 && n === 4) n = 5
-            else continue
-          }
-          var id = m * 6 + n
-          if ([5, 30, 35].includes(id) || idMat.includes(id)) continue
-          idMat.push(id)
-          steps[loop + 1].push([m, n])
-        }
-      }
-      if (steps[loop + 1].length === 0) return maxLoop - 1
-    }
-    return maxLoop - 1
-  },
   // 对当前局势的评价函数
   getScore(PUZZLE, CAMP) {
-    var score = 0, sign, dest, minPath, minId
-    var dest1 = [[5, 1], [5, 2], [5, 3], [5, 4]]
-    var dest2 = [[1, 5], [2, 5], [3, 5], [4, 5]]
+    var score = 0
     for (var i = 0; i < this.rank; i++) {
       for (var j = 0; j < this.rank; j++) {
-        if (PUZZLE[i][j] === 1) { dest = dest1; sign = -1 }
-        else if (PUZZLE[i][j] === 2) { dest = dest2; sign = 1 }
-        else continue
-        minPath = Infinity
-        for (d in dest) {
-          var path = this.getShortPath(PUZZLE, i, j, dest[d][0], dest[d][1])
-          if (path < minPath) { minPath = path; minId = d }
-        }
-        dest.splice(minId, 1)
-        score += minPath * sign
+        if (PUZZLE[i][j] === 1) score -= 5 - i
+        else if (PUZZLE[i][j] === 2) score += 5 - j
       }
     }
     return (CAMP === 1) ? score : -score
@@ -148,79 +116,64 @@ AI.prototype = {
     // 挑战继续
     return sucess
   },
+  // 自动走棋，返回下一个盘面
+  nextMove(PUZZLE, CAMP) {
+    var puzzles = this.move(PUZZLE, CAMP)
+    /* 按简单的最优策略走棋
+    */
+    if (puzzles.length === 0) return PUZZLE
+    var scores = Array(puzzles.length)
+    for (var i = 0; i < puzzles.length; i++) {
+      scores[i] = this.getScore(puzzles[i], CAMP)
+    }
+    var i = 0
+    for (var j = 1; j < puzzles.length; j++) {
+      if (scores[j] > scores[i] || 
+        (scores[j] === scores[i] && Math.random() < 0.5)  
+      ) i = j
+    }
+    /* 完全随机走棋
+    var i = 0
+    for (var j = 1; j < puzzles.length; j++) {
+      if (Math.random() < 0.5)  i = j
+    }
+    */
+    // 返回下一步
+    return (puzzles[i])
+  },
+  // 自动走棋，返回胜负
+  autoMove(PUZZLE, CAMP, ROUND, maxStep = 150) {
+    var puzzle = this.clone(PUZZLE)
+    for (var i = 0; i < maxStep; i++) {
+      ROUND = ROUND % 4 + 1
+      camp = [1, 2].indexOf(ROUND) > -1 ? 1 : 2
+      puzzle = this.nextMove(puzzle, camp)
+      var success = this.success(puzzle, CAMP)
+      if (success > 0) return [0, 1, -1][success]
+    }
+    return 0
+  },
   // 使用广度优先算法搜索答案，LOOPS表示需要考虑的回合数，LOOPS越大越智能
-  smartMove(PUZZLE, CAMP, LOOPS, ROUND = 4) {
-    this.init(PUZZLE, CAMP)
-    for (var loop = 0; loop < LOOPS; loop ++) {
-      var step = loop + 1
-      this.steps[step] = []
-      // ROUND记录是否为AI回合，玩家走棋1、2，AI走棋3、4
-      var AImove = [0, 3].includes((loop + ROUND) % 4)
-      var camp = AImove  ? CAMP : CAMP % 2 + 1
-      // 获得回合内可以得到的所有情况
-      for (var node of this.steps[loop]) {
-        var success = this.success(node.P, camp)
-        if (success > 0) {
-          node.score += [0, 100, -100, 0][success]
-          node.step = (loop === 0) ? step : -1
-        }
-        if (node.step === -1) continue
-        node.score = AImove ? -Infinity : Infinity
-        var puzzles = this.move(node.P, camp)
-        for (var puzzle of puzzles) {
-          var newNode = this.getNode(puzzle) 
-          newNode.score = this.getScore(puzzle, CAMP)
-          // 避免走来回步
-          if (newNode.step !== Infinity) continue
-          node.children.push(newNode)
-          newNode.step = step
-          this.steps[step].push(newNode)
-          // min-max 方法更新父节点得分
-          if (AImove) {
-            node.score = Math.max(node.score, newNode.score)
-          } else {
-            node.score = Math.min(node.score, newNode.score)
-          }
-        }
-        // min-max 剪枝
-        if (AImove) {
-          node.children.forEach(e => e.step = (e.score < node.score) ? -1 : node.step + 1 )
-        } else {
-          node.children.forEach(e => e.step = (e.score > node.score) ? -1 : node.step + 1 )
-        }
+  smartMove(PUZZLE, CAMP, ROUND = 4, LOOPS = 30) {
+    var puzzles = this.move(PUZZLE, CAMP)
+    if (puzzles.length === 0) return PUZZLE
+    var scores = Array(puzzles.length).fill(0)
+    for (var i = 0; i < puzzles.length; i++) {
+      for (var j = 0; j < LOOPS; j++) {
+        scores[i] += this.autoMove(puzzles[i], CAMP, ROUND)
       }
-      // 查询是否可以继续展开
-      var choices = 0
-      this.steps[step].forEach(e => choices += (e.step > -1) ? 1 : 0)
-      if (choices <= 1) break
+      scores[i] = scores[i] / LOOPS + this.getScore(puzzles[i]) / 20
     }
-// console.log(this.steps)
-    // 更新搜索范围内所有节点的得分
-    if (this.steps[1].length === 0) return PUZZLE
-    for (var i = this.steps.length - 2; i >= 0 ; i--) {
-      for (var node of this.steps[i]) {
-        if (node.step < 0) continue
-        if (!node.children.some(e => e.step > -1)) continue
-        var AImove = [0, 3].includes((i + ROUND) % 4)
-        node.score = AImove ? -Infinity : Infinity
-        for (var child of node.children) {
-          if (child.step < 0) continue
-          node.score = AImove ? 
-            Math.max(node.score, child.score) : 
-            Math.min(node.score, child.score)
-        }
-      }
+    var i = 0
+    for (var j = 1; j < puzzles.length; j++) {
+      if (scores[j] > scores[i] || 
+        (scores[j] === scores[i] && Math.random() < 0.5)  
+      ) i = j
     }
-//  console.log(this.steps)
-    // 判断最优着棋方案
-    var pointer = this.root.children[0]
-    for (var child of this.root.children) {
-      if (child.step < 0 || child.score < pointer.score) continue
-      if (child.score > pointer.score) pointer = child
-      else if (child.score === pointer.score && Math.random() < 0.5) pointer = child
-    }
-    if (pointer === null) return PUZZLE
-    return pointer.P
+    console.log(scores)
+    // 返回下一步
+    return (puzzles[i])
+
   }
 
 }

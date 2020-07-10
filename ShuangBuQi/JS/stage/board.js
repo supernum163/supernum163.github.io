@@ -17,7 +17,7 @@ Board.prototype = {
     // 自动走棋机器人的阵营
     this.camp = play.camp % 2 + 1
     // 决定自动走棋机器人需要考虑的回合数
-    this.loops = [2, 6][play.difficulty]
+    this.loops = [2, 300][play.difficulty]
     // 开局0，玩家走棋1、2，AI走棋3、4，一方胜利5，终局6
     this.round = (play.camp === 1) ? 2 : 4
     this.selected = []
@@ -121,7 +121,7 @@ Board.prototype = {
   update: function(play) {
     if ([3, 4].indexOf(this.round) < 0) return
     if (this.AIwaits > 0) { this.AIwaits--; return }
-    this.puzzle = this.ai.smartMove(this.puzzle, this.camp, this.loops, this.round)
+    this.puzzle = this.ai.smartMove(this.puzzle, this.camp, this.round, this.loops)
     this.AIwaits = 60
     this.check(play, 2)
   },

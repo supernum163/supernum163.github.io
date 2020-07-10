@@ -1,0 +1,151 @@
+
+<!DOCTYPE html>
+<html style="height: 100%">
+	<head>
+    <meta charset="utf-8">
+    <title>自动博弈</title>
+	</head>
+	<body>
+		<a id="save" href="#">保存数据</a>
+    <script type='text/javascript' src='AI.js'></script>
+		<script>
+			function fake_click(obj) {
+				var ev = document.createEvent("MouseEvents");
+				ev.initMouseEvent(
+					"click", true, false, window, 0, 0, 0, 0, 0
+					, false, false, false, false, 0, null
+				);
+				obj.dispatchEvent(ev);
+			}
+			//name-文件名；data-要保存的字符串。
+			function export_raw(name, data) {
+				var urlObject = window.URL || window.webkitURL || window;
+				var export_blob = new Blob([data]);
+        var save_link = document.createElementNS("http://www.w3.org/1999/xhtml", "a");
+				save_link.href = urlObject.createObjectURL(export_blob);
+				save_link.download = name;
+				fake_click(save_link);
+      }
+
+      function move(AI, PUZZLE, CAMP) {
+        var puzzles = AI.move(PUZZLE, CAMP)
+        /* 按简单的最优策略走棋
+        */
+        if (puzzles.length === 0) return PUZZLE
+        var scores = Array(puzzles.length)
+        for (var i = 0; i < puzzles.length; i++) {
+          scores[i] = AI.getScore(puzzles[i], CAMP)
+        }
+        var i = 0
+        for (var j = 1; j < puzzles.length; j++) {
+          if (scores[j] > scores[i] || 
+            (scores[j] === scores[i] && Math.random() < 0.5)  
+          ) i = j
+        }
+        /* 完全随机走棋
+        var i = 0
+        for (var j = 1; j < puzzles.length; j++) {
+          if (Math.random() < 0.5)  i = j
+        }
+        */
+        // 返回下一步
+        return (puzzles[i])
+      }
+
+      function logTemp(DATA, AI, PUZZLE, CAMP) {
+        var id = AI.getPuzzleId(PUZZLE)
+        var data = {id: id, N: 1, Q: 0}
+        if (CAMP === 1) DATA.camp1.push(data)
+        else  DATA.camp2.push(data)
+      }
+      
+      function logResult(DATA) {
+        // DATA.camp1 = DATA.camp1.concat(DATA.camp2)
+        for (var data of DATA.camp1) {
+          var id = data.id, N = data.N, Q = data.Q
+          if (DATA.result.camp1[id] === undefined) {
+            DATA.result.camp1[id] = {N: N, Q: Q}
+          } else {
+            DATA.result.camp1[id].N += N
+            DATA.result.camp1[id].Q += Q
+          }
+        }
+        for (var data of DATA.camp2) {
+          var id = data.id, N = data.N, Q = data.Q
+          if (DATA.result.camp2[id] === undefined) {
+            DATA.result.camp2[id] = {N: N, Q: Q}
+          } else {
+            DATA.result.camp2[id].N += N
+            DATA.result.camp2[id].Q += Q
+          }
+        }
+        DATA.N += 1
+        DATA.camp1 = []
+        DATA.camp2 = []
+      }
+
+			window.onload = function() {
+        var DATA = {
+          N: 0,
+          result: {
+            camp1: {},
+            camp2: {},
+          },
+          camp1: [],
+          camp2: [],
+        }
+        /*
+        var url = "DATA.json"
+        var request = new XMLHttpRequest();
+        request.open("get", url);
+        request.send(null);
+        request.onload = function () {
+          if (request.status !== 200) return
+          var DATA = JSON.parse(request.responseText);
+        }
+        */
+
+				document.getElementById('save').onclick = function() {
+					var data = JSON.stringify(DATA);
+          export_raw('DATA.json', data);
+        }
+        
+
+        var ai = new AI()
+        var m = 10; n = 150
+        for (var i = 0; i < m; i++) {
+          var puzzle = [
+            [ 0,  1,  1,  1,  1, -1],
+            [ 2,  0,  0,  0,  0,  0],
+            [ 2,  0,  0,  0,  0,  0],
+            [ 2,  0,  0,  0,  0,  0],
+            [ 2,  0,  0,  0,  0,  0],
+            [-1,  0,  0,  0,  0, -1],
+          ]
+          var round = 2, camp = 1
+          for (var j = round; j < 2 + n; j++) {
+            puzzle = move(ai, puzzle, camp)
+            logTemp(DATA, ai, puzzle, camp)
+            var success = ai.success(puzzle, 1)
+            if (success > 0) {
+              if (success === 1) {              
+                DATA["camp1"].forEach(d => d. Q = 1)
+                DATA["camp2"].forEach(d => d. Q = -1)
+              } else {
+                DATA["camp1"].forEach(d => d. Q = -1)
+                DATA["camp2"].forEach(d => d. Q = 1)
+              }
+              logResult(DATA)
+              break
+            }
+            round = round % 4 + 1
+            camp = [1, 2].indexOf(round) > -1 ? 1 : 2
+          }
+          if (j === n) logResult(DATA)
+        }
+        console.log("========= 记录完毕 =========")
+			}
+		</script>
+	</body>
+</html>
+
