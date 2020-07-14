@@ -17,9 +17,9 @@ Board.prototype = {
     // 自动走棋机器人的阵营
     this.camp = play.camp % 2 + 1
     // 决定自动走棋机器人需要考虑的回合数
-    this.loops = [2, 300][play.difficulty]
-    // 开局0，玩家走棋1、2，AI走棋3、4，一方胜利5，终局6
-    this.round = (play.camp === 1) ? 2 : 4
+    this.loops = [300, 900][play.difficulty]
+    // 开局0，先手走棋1、2，后手走棋3、4
+    this.round = 2
     this.selected = []
     this.lastMove = []
     this.availPos = []
@@ -45,6 +45,9 @@ Board.prototype = {
     // 回合按钮关键位置
     this.Bround_x = adapt.W_3 * 2
     this.Bround_y = adapt.H_4 * 3 + adapt.W_4
+  },
+  playerGo: function() {
+    return Math.ceil(this.round / 2) === play.camp
   },
   draw: function(play) {
     // 游戏标题
@@ -75,8 +78,7 @@ Board.prototype = {
     ctx.stroke()
     // 绘制棋子
     ctx.strokeStyle = "green"
-    var playerGo = [3, 4].indexOf(this.round) < 0 
-    var playerChoose = playerGo && this.selected.length === 0
+    var playerChoose = this.playerGo() && this.selected.length === 0
     for (var i = 0; i < this.puzzle.length; i++) {
       for (j = 0; j < this.puzzle[i].length; j++) {
         var chess = this.puzzle[i][j]
@@ -93,7 +95,7 @@ Board.prototype = {
     // 绘制回合按钮
     ctx.beginPath()
     ctx.arc(this.Bround_x, this.Bround_y, this.buttonW_2, 0, Math.PI * 2)
-    ctx.fillStyle = (playerGo ^ (play.camp === 1)) ? "blue" : "red"
+    ctx.fillStyle = (this.round > 2) ? "blue" : "red"
     ctx.fill()
     ctx.fillStyle = "white"
     ctx.font = 'bold ' + adapt.W_12 + 'px monospace'
@@ -119,11 +121,11 @@ Board.prototype = {
   },
   // AI自动走棋 
   update: function(play) {
-    if ([3, 4].indexOf(this.round) < 0) return
+    if (this.playerGo()) return
     if (this.AIwaits > 0) { this.AIwaits--; return }
-    this.puzzle = this.ai.smartMove(this.puzzle, this.camp, this.round, this.loops)
-    this.AIwaits = 60
-    this.check(play, 2)
+    this.puzzle = this.ai.smartMove(this.puzzle, this.round, this.loops)
+    this.AIwaits = 30
+    this.check(play, play.camp * 2)
   },
   check : function(play, finalRound) {
     var result = this.ai.success(this.puzzle, play.camp)
@@ -159,7 +161,7 @@ Board.prototype = {
       e.Y > this.Brestart_y0 && e.Y < this.Brestart_y1
     ) { play.stage = 0; return }
     // 判断是否到玩家回合
-    if ([1, 2].indexOf(this.round) < 0) return
+    if (!this.playerGo()) return
     // 点击回合按钮时，跳过当前回合
     if (this.buttonW_2 ** 2 > 
       (e.X - this.Bround_x) ** 2 + (e.Y - this.Bround_y) ** 2
@@ -182,7 +184,7 @@ Board.prototype = {
       var [i, j] = this.selected
       this.puzzle[i][j] = 0
       this.selected = []
-      this.check(play, 4)
+      this.check(play, this.camp * 2)
     }
   }
 

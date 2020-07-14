@@ -1,39 +1,9 @@
 
 AI = function() {
   this.rank = 6
-  this.chessType = 3
 }
 
 AI.prototype = {
-
-  init(PUZZLE, CAMP) {
-    // 全局匹配时用的多分岔树
-    this.idMat = {}
-    // 博弈树根结点
-    this.root = this.getNode(PUZZLE)
-    this.root.step = 0
-    this.root.score = this.getScore(PUZZLE, CAMP)
-    // 博弈树
-    this.steps = [[ this.root ]]
-  },
-  // 获取谜题对应的ID
-  getPuzzleId(PUZZLE) {
-    var vec = []
-    for (var i = 0; i < this.rank; i++) {
-      for (var j = 0; j < this.rank; j++) {
-        if (PUZZLE[i][j] <= 0) continue
-        vec.push(PUZZLE[i][j] * 100 + i * 10 + j)
-      }
-    }
-    return vec.sort().toString()
-  },
-  // 由盘面生成博弈树结点，step表示盘面位于现有博弈树的第几层，没有则为Infinity
-  getNode(PUZZLE) {
-    var id = this.getPuzzleId(PUZZLE)
-    if (this.idMat[id] === undefined) 
-      this.idMat[id] = { P: PUZZLE, children: [], step: Infinity, score: undefined }
-    return this.idMat[id]
-  },
   // 克隆盘面
   clone(PUZZLE) {
     var puzzle = Array(this.rank)
@@ -45,6 +15,17 @@ AI.prototype = {
     }
     return puzzle
   }, 
+  // 获取谜题对应的ID
+  getPuzzleId(PUZZLE) {
+    var vec = []
+    for (var i = 0; i < this.rank; i++) {
+      for (var j = 0; j < this.rank; j++) {
+        if (PUZZLE[i][j] <= 0) continue
+        vec.push(PUZZLE[i][j] * 100 + i * 10 + j)
+      }
+    }
+    return vec.sort().toString()
+  },
   availPos(PUZZLE, i, j, chess = PUZZLE[i][j]) {
     var pos = []
     if (i === 5 && PUZZLE[4][j] === 0) {
@@ -141,43 +122,78 @@ AI.prototype = {
     // 返回下一步
     return (puzzles[i])
   },
-  // 自动走棋，返回胜负
-  autoMove(PUZZLE, CAMP, ROUND, maxStep = 150) {
-    var puzzle = this.clone(PUZZLE)
-    for (var i = 0; i < maxStep; i++) {
-      ROUND = ROUND % 4 + 1
-      camp = [1, 2].indexOf(ROUND) > -1 ? 1 : 2
-      puzzle = this.nextMove(puzzle, camp)
-      var success = this.success(puzzle, CAMP)
-      if (success > 0) return [0, 1, -1][success]
-    }
-    return 0
-  },
-  // 使用广度优先算法搜索答案，LOOPS表示需要考虑的回合数，LOOPS越大越智能
-  smartMove(PUZZLE, CAMP, ROUND = 4, LOOPS = 30) {
-    var puzzles = this.move(PUZZLE, CAMP)
-    if (puzzles.length === 0) return PUZZLE
-    var scores = Array(puzzles.length).fill(0)
-    for (var i = 0; i < puzzles.length; i++) {
-      for (var j = 0; j < LOOPS; j++) {
-        scores[i] += this.autoMove(puzzles[i], CAMP, ROUND)
+  // 选择
+  select : function() {
+    var node = this.root
+    while(node.next.length > 0) {
+      var tmp, score = 0
+      for (n of node.next) {
+        // 选择未扩展的节点
+        if (n.N === 0) { tmp = n; break }
+        // 选择 UCT 得分高的节点
+        var s = n.Q / n.N + Math.sqrt(2 * Math.log(this.root.N) / n.N)
+        if (s > score) { score = s; tmp = n }
       }
-      scores[i] = scores[i] / LOOPS + this.getScore(puzzles[i]) / 20
+      node = tmp      
     }
-    var i = 0
-    for (var j = 1; j < puzzles.length; j++) {
-      if (scores[j] > scores[i] || 
-        (scores[j] === scores[i] && Math.random() < 0.5)  
-      ) i = j
+    return node
+  },
+  // 扩展
+  expand: function(node) {
+    var camp = [1, 2].indexOf(node.R) > -1 ? 1 : 2
+    var puzzles = this.move(node.P, camp)
+    if (puzzles.length === 0) puzzles = [this.clone(node.P)]
+    var round = node.R % 4 + 1
+    for (var puzzle of puzzles) {
+      var n = { P: puzzle, prev: node, next: [], Q: 0, N: 0, R: round }
+      node.next.push(n)
     }
-    console.log(scores)
-    // 返回下一步
-    return (puzzles[i])
+    var i = parseInt(Math.random() * node.next.length)
+    return node.next[i]
+  },
+  // 模拟
+  simulate: function(node) {
+    var puzzle = this.clone(node.P)
+    var round = node.R, success = 0
+    for (var i = 0; i < 150; i++) {
+      success = this.success(puzzle, 1)
+      if (success > 0) break
+      camp = [1, 2].indexOf(round) > -1 ? 1 : 2
+      var puzzle = this.nextMove(puzzle, camp)
+      round = round % 4 + 1
+    }
+    return success
+  },
+  // 回溯
+  feedback: function(node, success) {
+    for (var n = node; n !== null; n = n.prev) {
+      n.N++
+      if (success === 1 && [2, 3].indexOf(n.R) > -1) n.Q++
+      else if (success === 2 && [4, 1].indexOf(n.R) > -1) n.Q++
+    }
+  },
+  
+  // 使用广度优先算法搜索答案，LOOPS表示需要考虑的回合数，LOOPS越大越智能
+  smartMove(PUZZLE, ROUND = 4, LOOPS = 30) {
+    this.root = { P: PUZZLE, prev: null, next: [], Q: 0, N: 0, R: ROUND }
+
+    // 进行 LOOPS 次抽样
+    for (var i = 0; i < LOOPS; i++) {
+      var node = this.select()
+      node = this.expand(node)
+      var success = this.simulate(node)
+      this.feedback(node, success)
+    }
+    // 选择最优着法
+    var tmp, N = 0
+    for (n of this.root.next) {
+      if (n.N > N) { N = n.N; tmp = n }
+    }
+    return tmp.P
 
   }
 
 }
-
 
 
 /*
@@ -191,9 +207,9 @@ var puzzle = [
 ]
 
 var ai = new AI()
-ai.smartMove(puzzle, 1, 4, 4)
-
-ai.getScore(puzzle, 1)
-ai.getShortPath(puzzle, 1, 0, 1, 5)
-
+ai.smartMove(puzzle, 2, 1)
 */
+
+
+
+
