@@ -1,5 +1,10 @@
 const GAMES = [
   {
+    id : "12", link: "ShuangBuQi", title: "双步棋", pic: "web/images/12_ShuangBuQi.png",
+    desc: "双步棋因博弈双方每次要走两步而得名（开局和终局除外），棋手应尽量先于对手将己方棋子走入出发点所在射线的另一端。",
+    releaseDate: "2020-07-15"
+  },
+  {
     id : "11", link: "NiuJiaoQi", title: "牛角棋", pic: "web/images/11_NiuJiaoQi.png",
     desc: "牛角棋因棋盘像牛角而得名，对弈时双方轮流将棋子沿棋盘线移动一步，对于猎人方而言，将牛赶至“牛角尖”即可获胜，期间不能走回头路，而牛只需要突破包围即可获胜。",
     releaseDate: "2020-06-06"

@@ -15,7 +15,7 @@ AI.prototype = {
     }
     return puzzle
   }, 
-  // 获取谜题对应的ID
+  // 获取盘面对应的ID
   getPuzzleId(PUZZLE) {
     var vec = []
     for (var i = 0; i < this.rank; i++) {
@@ -26,6 +26,7 @@ AI.prototype = {
     }
     return vec.sort().toString()
   },
+  // 获取 [i, j] 棋位上的棋子下一步能够走到哪些棋位
   availPos(PUZZLE, i, j, chess = PUZZLE[i][j]) {
     var pos = []
     if (i === 5 && PUZZLE[4][j] === 0) {
@@ -172,11 +173,10 @@ AI.prototype = {
       else if (success === 2 && [4, 1].indexOf(n.R) > -1) n.Q++
     }
   },
-  
-  // 使用广度优先算法搜索答案，LOOPS表示需要考虑的回合数，LOOPS越大越智能
+  // 使用蒙特卡洛树搜索最佳着法，LOOPS表示需要进行多少次抽样，LOOPS越大结果越可信
   smartMove(PUZZLE, ROUND = 4, LOOPS = 30) {
+    // 建立根节点
     this.root = { P: PUZZLE, prev: null, next: [], Q: 0, N: 0, R: ROUND }
-
     // 进行 LOOPS 次抽样
     for (var i = 0; i < LOOPS; i++) {
       var node = this.select()
@@ -185,12 +185,12 @@ AI.prototype = {
       this.feedback(node, success)
     }
     // 选择最优着法
-    var tmp, N = 0
+    var tmp = null, N = 0
     for (n of this.root.next) {
       if (n.N > N) { N = n.N; tmp = n }
     }
-    return tmp.P
-
+    // 避免空指针错误，找不到最佳解法时返回原盘面
+    return (tmp === null) ? PUZZLE : tmp.P
   }
 
 }

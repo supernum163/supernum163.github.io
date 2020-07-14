@@ -5,6 +5,7 @@ Board = function() {
 
 Board.prototype = {
   init: function(play) {
+    this.resize()
     // 6 * 6 棋盘，-1为不可到达位、0为空位、1为先手棋子、2为后手棋子
     this.puzzle = [
       [ 0,  1,  1,  1,  1, -1],
@@ -14,17 +15,17 @@ Board.prototype = {
       [ 2,  0,  0,  0,  0,  0],
       [-1,  0,  0,  0,  0, -1],
     ]
+    // 决定自动走棋机器人需要考虑的回合数
+    this.loops = [100, 1000][play.difficulty]
     // 自动走棋机器人的阵营
     this.camp = play.camp % 2 + 1
-    // 决定自动走棋机器人需要考虑的回合数
-    this.loops = [300, 900][play.difficulty]
+    // AI每次着棋间隔帧数
+    this.AIwaits = 30
     // 开局0，先手走棋1、2，后手走棋3、4
     this.round = 2
+    // 玩家选中的棋子和可以移往的棋位
     this.selected = []
-    this.lastMove = []
     this.availPos = []
-    this.resize()
-    this.AIwaits = 30
   },
   resize: function() {
     // 记录棋盘关键信息
@@ -131,7 +132,8 @@ Board.prototype = {
     var result = this.ai.success(this.puzzle, play.camp)
     if (play.result === 0 && result !== 0) {
       play.result = result
-      this.round = finalRound
+      if ([1, 3].indexOf(this.round) > -1) play.stage = 2
+      else this.round = finalRound
     } else if (play.result !== 0) {
       play.result = result
       play.stage = 2
