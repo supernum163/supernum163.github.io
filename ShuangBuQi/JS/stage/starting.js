@@ -46,7 +46,7 @@ Starting.prototype = {
     ctx.fillText("开始游戏", adapt.W_2, this.text3_y)
     // 难易度选项
     ctx.strokeRect(this.x1, this.y1, this.w1, this.w1)
-    var msg = ["简单", "普通"][play.difficulty]
+    var msg = ["简单", "困难"][play.difficulty]
     ctx.fillText(msg, this.text1_x, this.text1_y)
     // 先后手选项
     // ctx.fillStyle = ["", "red", "blue"][play.camp]
