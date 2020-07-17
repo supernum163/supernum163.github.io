@@ -116,7 +116,7 @@ AI.prototype = {
   select : function() {
     var node = this.root
     while(node.next.length > 0) {
-      var tmp, score = 0
+      var tmp, score = -1
       for (n of node.next) {
         // 选择未扩展的节点
         if (n.N === 0) { tmp = n; break }
@@ -160,6 +160,7 @@ AI.prototype = {
       n.N++
       if (success === 1 && [2, 3].indexOf(n.R) > -1) n.Q++
       else if (success === 2 && [4, 1].indexOf(n.R) > -1) n.Q++
+      // else if (success === 3) n.Q++
     }
   },
   // 使用蒙特卡洛树搜索最佳着法，LOOPS表示需要进行多少次抽样，LOOPS越大结果越可信

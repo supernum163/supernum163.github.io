@@ -33,8 +33,6 @@ AI.prototype = {
   },
   // 获取 [i, j] 棋位上的棋子下一步能够走到哪些棋位
   availPos(PUZZLE, ROUND) {
-
-    if (ROUND > 9) console.log(this.root)
     var pos = []
     // 布棋阶段
     if (PUZZLE.length < 10) {
@@ -100,9 +98,8 @@ AI.prototype = {
   // 选择
   select : function() {
     var node = this.root
-    if (node === undefined) console.log(this.root)
     while(node.next.length > 0) {
-      var tmp, score = 0
+      var tmp, score = -1
       for (n of node.next) {
         // 选择未扩展的节点
         if (n.N === 0) { tmp = n; break }
@@ -111,12 +108,12 @@ AI.prototype = {
         if (s > score) { score = s; tmp = n }
       }
       node = tmp
+      if (node === undefined) console.log("select", this.root)
     }
     return node
   },
   // 扩展
   expand: function(node) {
-    if (node === undefined) console.log(this.root)
     var puzzles = this.move(node.P, node.R)
     if (puzzles.length === 0) puzzles = [this.clone(node.P)]
     var round = (node.R + 1) % 10
@@ -180,15 +177,15 @@ var puzzle = [
 ]
 
 var puzzle = [
-  [0, 0], [0, 8], 
-  [1, 1], [1, 7], 
-  [2, 0], [2, 8], 
-  [3, 1], [3, 7], 
-  [4, 0], 
+      [2, 8], [4, 0], 
+      [2, 6], [0, 8], 
+      [1, 5], [4, 8], 
+      [3, 5], [1, 7], 
+      [1, 3], [4, 6],
 ]
 
 var ai = new AI()
-ai.availPos(puzzle, 1)
+ai.availPos(puzzle, 5)
 ai.success(puzzle, 0)
 ai.smartMove(puzzle, 0, 1)
 */

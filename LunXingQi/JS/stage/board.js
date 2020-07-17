@@ -83,6 +83,7 @@ Board.prototype = {
     }
     ctx.stroke()
     // 绘制棋子
+    ctx.font = 'bold ' + this.chessW_2 + 'px monospace'
     for (var n = 0; n < this.puzzle.length; n++) {
       var [i, j] = this.puzzle[n]
       var [x, y] = this.getXY(i, j)
@@ -90,30 +91,35 @@ Board.prototype = {
       ctx.arc(x, y, this.chessW_2, 0, Math.PI * 2)
       ctx.fillStyle = (n % 2 === 0) ? "red" : "blue"
       ctx.fill()
-      ctx.fillStyle = "white"
-      ctx.font = 'bold ' + this.chessW_2 + 'px monospace'
-      ctx.fillText(n, x, y)
       ctx.strokeStyle = "black"
       ctx.stroke()
+      ctx.fillStyle = "white"
+      ctx.fillText(n, x, y)
     }
-    // 绘制回合按钮
-    ctx.beginPath()
-    ctx.arc(this.Bround_x, this.Bround_y, this.buttonW_2, 0, Math.PI * 2)
-    ctx.fillStyle = (this.round % 2 === 0) ? "red" : "blue"
-    ctx.fill()
-    ctx.fillStyle = "white"
-    ctx.font = 'bold ' + adapt.W_12 + 'px monospace'
-    ctx.fillText(this.round, this.Bround_x, this.Bround_y)
     // 绘制可以移往的棋位
     if (this.availPos.length === 0) return
-    ctx.strokeStyle =  (this.round % 2 === 0) ? "red" : "blue"
+    var color = (this.round % 2 === 0) ? "red" : "blue"
     for (var [i, j] of this.availPos) {
       var [x, y] = this.getXY(i, j)
       ctx.beginPath()
       ctx.arc(x, y, this.chessW_2, 0, Math.PI * 2)
+      ctx.fillStyle = "white"
       ctx.fill()
+      ctx.strokeStyle = color
       ctx.stroke()
+      ctx.fillStyle = color
+      ctx.fillText(this.round, x, y)
     }
+    // 绘制回合按钮
+    ctx.beginPath()
+    ctx.arc(this.Bround_x, this.Bround_y, this.buttonW_2, 0, Math.PI * 2)
+    ctx.fillStyle = color
+    ctx.fill()
+    ctx.strokeStyle = "black"
+    ctx.stroke()
+    ctx.fillStyle = "white"
+    ctx.font = 'bold ' + adapt.W_12 + 'px monospace'
+    ctx.fillText(this.round, this.Bround_x, this.Bround_y)
   },
   // AI自动走棋 
   update: function(play) {
