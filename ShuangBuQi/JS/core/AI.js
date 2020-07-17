@@ -15,17 +15,6 @@ AI.prototype = {
     }
     return puzzle
   }, 
-  // 获取盘面对应的ID
-  getPuzzleId(PUZZLE) {
-    var vec = []
-    for (var i = 0; i < this.rank; i++) {
-      for (var j = 0; j < this.rank; j++) {
-        if (PUZZLE[i][j] <= 0) continue
-        vec.push(PUZZLE[i][j] * 100 + i * 10 + j)
-      }
-    }
-    return vec.sort().toString()
-  },
   // 获取 [i, j] 棋位上的棋子下一步能够走到哪些棋位
   availPos(PUZZLE, i, j, chess = PUZZLE[i][j]) {
     var pos = []

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1, shrink-to-fit=no">
+    <link rel="icon" href="images/favicon.png">
+    <title>轮行棋</title>
+  </head>
+  <body>
+    <!-- 网页正文 -->
+
+    <link rel="stylesheet" href="game.css">
+    <canvas id='canvasID0'>抱歉，您的浏览器不支持 canvas</canvas>
+
+    <script type='text/javascript' src='JS/base/images.js'></script>
+    <script type='text/javascript' src='JS/base/audios.js'></script>
+    <script type='text/javascript' src='JS/base/loading.js'></script>
+    <script type='text/javascript' src='JS/base/adapt.js'></script>
+    <script type='text/javascript' src='JS/core/AI.js'></script>
+    <script type='text/javascript' src='JS/stage/board.js'></script>
+    <script type='text/javascript' src='JS/stage/starting.js'></script>
+    <script type='text/javascript' src='JS/stage/endding.js'></script>
+    <script type='text/javascript' src='JS/play.js'></script>
+    <script>
+      let canvas = document.getElementById("canvasID0")
+      let ctx = canvas.getContext('2d')
+      let adapt = new Adapt(360, 640, 9/16, 20/9)
+      let play = new Play()
+      let resize = function() {
+        adapt.init()
+        play.resize()
+      }
+      window.onorientationchange = function() {
+        adapt.initCanvas()
+        setTimeout(resize, 100)
+      }
+      window.onresize = resize
+    </script>
+    
+  </body>
+</html>
