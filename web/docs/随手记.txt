@@ -1,0 +1,7 @@
+
+# windows下注册mongoDB服务
+mongod -f <full path of config file> --serviceName mongoDB --install
+# 启动mongoDB服务，需要管理员权限
+net start mongoDB
+# 关闭mongoDB服务
+net stop mongoDB
