@@ -1,6 +1,6 @@
 
 ## 1、连接与退出
-```SQL
+```
 /* 建立连接 */
 shell> mysql -h host -u user -p
 Enter password: ********
