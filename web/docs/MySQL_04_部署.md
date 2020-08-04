@@ -30,11 +30,30 @@ mysqladmin --count=1K --sleep=10 ping
 # 2、配置文件
 
 MySQL默认按照以下路径依次加载配置文件，注意：
-- **.mylogin.cnf** 是由 **mysql_config_editor** 创建的加密文件
 - **mysqld-auto.cnf** 是由MySQL服务器创建的JSON格式的文件
+- **.mylogin.cnf** 一般是由 **mysql_config_editor** 创建的加密文件
+```shell
+-G，–login-path=name 在登录文件中的登陆入口名称（默认为client）
+-h,–host=name 添加host到登陆文件中
+-P，–port=name 添加登陆端口到登陆文件中
+-u，–user 添加用户名到登陆文件中
+-p,–password 在登陆文件中添加密码（该密码会被mysql_config_editor自动加密）
+-S,–socket=name 添加sock文件路径到登陆文件中
 
-![windows默认配置文件](MySQL_04_部署_pic01.png)
-![linux默认配置文件](MySQL_04_部署_pic02.png)
+# 查看当前主机上的加密文件
+mysql_config_editor print --all 
+# 设置名称为remote的登陆入口
+mysql_config_editor set --login-path=remote  -h host -P port dbname
+# 使用登陆入口直接登陆
+mysql --login-path=remote 
+# 删除名称为remote的登陆入口
+mysql_config_editor remove --login-path=remote
+# 删除所有登陆入口
+mysql_config_editor reset 
+```
+
+![windows默认配置文件](MySQL_04_部署_配置文件路径_windows.png)
+![linux默认配置文件](MySQL_04_部署_配置文件路径_linux.png)
 
 以下是几个示例配置文件，注意：
 - 所有的 *长命令* 都可以卸载配置文件中
