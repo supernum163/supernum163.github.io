@@ -30,7 +30,7 @@ mysqladmin --count=1K --sleep=10 ping
 # 2、配置文件
 
 MySQL默认按照以下路径依次加载配置文件，注意：
-- **mysqld-auto.cnf** 是由MySQL服务器创建的JSON格式的文件
+- **mysqld-auto.cnf** 是由MySQL服务器创建的JSON格式的文件,记录持久化的系统变量
 - **.mylogin.cnf** 一般是由 **mysql_config_editor** 创建的加密文件
 ```shell
 -G，–login-path=name 在登录文件中的登陆入口名称（默认为client）
@@ -81,6 +81,9 @@ port=3306
 socket=/tmp/mysql.sock
 key_buffer_size=16M
 max_allowed_packet=128M
+datadir=～/mysqlDB/
+tmpdir=～/mysqlDB/tmp/
+basedir=/etc/mysql/ 
 
 [mysqld-8.0]
 sql_mode=TRADITIONAL
